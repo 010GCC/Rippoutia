@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rippoutai  Impossible Cube Prototype (v0.2 Fluid Controls)</title>
+  <title>Rippoutai — Impossible Cube Prototype (v0.2 Multi-Axis Fluid Controls)</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap');
@@ -12,6 +12,7 @@
       --bg: #0a0a0f;
       --panel: #121218;
       --accent: #3b82f6;
+      --accent2: #8b5cf6;
       --text: #e2e8f0;
       --muted: #64748b;
     }
@@ -56,28 +57,31 @@
       left: 50%;
       transform: translateX(-50%);
       display: flex;
-      gap: 12px;
+      gap: 10px;
       z-index: 100;
       background: var(--panel);
       padding: 10px 14px;
       border-radius: 9999px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.4);
       border: 1px solid #1f2937;
+      flex-wrap: wrap;
+      justify-content: center;
     }
     
     button {
       background: #1f2937;
       color: var(--text);
       border: none;
-      padding: 10px 20px;
+      padding: 10px 18px;
       border-radius: 9999px;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 500;
       cursor: pointer;
       transition: all 0.2s ease;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 7px;
+      white-space: nowrap;
     }
     
     button:hover {
@@ -94,19 +98,25 @@
       background: #2563eb;
     }
     
+    button.active {
+      background: var(--accent2);
+      color: white;
+    }
+    
     .status {
       position: absolute;
       top: 80px;
       left: 50%;
       transform: translateX(-50%);
       background: var(--panel);
-      padding: 8px 16px;
+      padding: 8px 18px;
       border-radius: 9999px;
       font-size: 13px;
       color: var(--muted);
       border: 1px solid #1f2937;
       z-index: 100;
       white-space: nowrap;
+      text-align: center;
     }
     
     .legend {
@@ -119,7 +129,7 @@
       font-size: 13px;
       border: 1px solid #1f2937;
       z-index: 100;
-      max-width: 220px;
+      max-width: 230px;
     }
     
     .legend-item {
@@ -137,17 +147,17 @@
     
     .info {
       position: absolute;
-      bottom: 90px;
+      bottom: 95px;
       left: 50%;
       transform: translateX(-50%);
       font-size: 12px;
       color: var(--muted);
       text-align: center;
-      max-width: 420px;
-      line-height: 1.4;
+      max-width: 460px;
+      line-height: 1.45;
       z-index: 100;
-      background: rgba(18,18,24,0.7);
-      padding: 8px 16px;
+      background: rgba(18,18,24,0.75);
+      padding: 9px 16px;
       border-radius: 8px;
       backdrop-filter: blur(8px);
     }
@@ -155,46 +165,57 @@
     canvas {
       display: block;
     }
+    
+    .mode-badge {
+      font-size: 10px;
+      padding: 1px 7px;
+      border-radius: 9999px;
+      background: #1f2937;
+      color: #94a3b8;
+      margin-left: 6px;
+    }
   </style>
 </head>
 <body>
   <div class="header">
     <div>
-      <div class="title">Rippoutai <span style="color:#64748b; font-weight:400;">(�BS)</span></div>
-      <div class="subtitle">Impossible Cube Prototype " Fluid Controls v0.2</div>
+      <div class="title">Rippoutai <span style="color:#64748b; font-weight:400;">(離魂体)</span></div>
+      <div class="subtitle">Impossible Cube Prototype — Multi-Axis Fluid Controls v0.2</div>
     </div>
     <div style="text-align:right; font-size:12px; color:#64748b;">
-      Detached Soul " Perspective " Reconnection
+      Detached Soul • Perspective • Reconnection
     </div>
   </div>
 
   <div class="status" id="status">
-    Drag to rotate the cube " Release to park at any angle
+    Drag horizontally to rotate • Release to park at any angle
   </div>
 
   <div class="legend">
     <div class="legend-item">
       <div class="legend-dot" style="background:#3b82f6;"></div>
-      <span>Cube faces (tap to select)</span>
+      <span>Cube faces (fluid rotation)</span>
     </div>
     <div class="legend-item">
       <div class="legend-dot" style="background:#ef4444;"></div>
-      <span>Shadow / Soul figures</span>
+      <span>Shadow / Soul figures (reactive)</span>
     </div>
-    <div style="margin-top:8px; font-size:11px; color:#64748b;">
-      Continuous spring-damper rotation.<br>
-      No hard snapping to 0�/90�.
+    <div style="margin-top:8px; font-size:11px; color:#64748b; line-height:1.35;">
+      Spring-damper steering model.<br>
+      No hard snapping. Park at any angle.<br>
+      Toggle Multi-Axis to explore all faces.
     </div>
   </div>
 
-  <div class="info">
-    The cube now uses <strong>fluid steering-style controls</strong> (spring + damping). 
-    You can park it at any angle. Shadows react continuously to the cube's orientation.
+  <div class="info" id="info">
+    <strong>Fluid steering-style controls</strong> (spring + damping). 
+    You can park the cube at any orientation. Shadows react continuously to rotation.
   </div>
 
   <div class="controls">
     <button onclick="resetCube()">Reset</button>
-    <button onclick="randomizeAngle()" class="primary">Randomize Angle</button>
+    <button onclick="randomizeAngle()" class="primary">Randomize</button>
+    <button onclick="toggleMultiAxis()" id="multiAxisBtn">Multi-Axis Orbit <span class="mode-badge">OFF</span></button>
     <button onclick="toggleShadows()">Toggle Shadows</button>
   </div>
 
@@ -204,12 +225,20 @@
     let cube, shadowGroup;
     let isDragging = false;
     let previousMouseX = 0;
+    let previousMouseY = 0;
 
     // === Fluid Control State (Spring-Damper Steering Model) ===
+    // Extended for multi-axis with identical characteristics on both axes
     const state = {
-      currentAngle: 0,      // radians - what is actually applied
-      targetAngle: 0,
-      angularVelocity: 0,
+      currentRotY: 0.4,     // Yaw (horizontal) - original north/south pole style axis
+      targetRotY: 0.4,
+      velY: 0,
+      
+      currentRotX: 0,       // Pitch (vertical) - new axis for full face exploration
+      targetRotX: 0,
+      velX: 0,
+      
+      multiAxisMode: false, // Toggle for exploring all faces
       shadowsEnabled: true
     };
 
@@ -324,11 +353,6 @@
       canvas.addEventListener('touchend', onMouseUp);
 
       window.addEventListener('resize', onResize);
-      
-      // Initial slight rotation so it's not perfectly aligned
-      state.currentAngle = 0.4;
-      state.targetAngle = 0.4;
-      cube.rotation.y = state.currentAngle;
     }
 
     function onResize() {
@@ -340,28 +364,40 @@
     function onMouseDown(e) {
       isDragging = true;
       previousMouseX = e.clientX;
+      previousMouseY = e.clientY;
     }
 
     function onMouseMove(e) {
       if (!isDragging) return;
       
       const deltaX = e.clientX - previousMouseX;
+      const deltaY = e.clientY - previousMouseY;
       previousMouseX = e.clientX;
+      previousMouseY = e.clientY;
       
-      // Continuous target update (steering input style)
       const sensitivity = 0.008;
-      state.targetAngle += deltaX * sensitivity;
+      
+      if (state.multiAxisMode) {
+        // Multi-axis mode: horizontal = Yaw, vertical = Pitch
+        // Same fluid steering characteristics on both axes
+        state.targetRotY += deltaX * sensitivity;
+        state.targetRotX += deltaY * sensitivity * 0.9; // slightly softer vertical for comfort
+      } else {
+        // Classic single-axis mode (original north/south pole axis behavior)
+        state.targetRotY += deltaX * sensitivity;
+      }
     }
 
     function onMouseUp() {
       isDragging = false;
-      // On release we do NOT snap  player can park at any angle
+      // On release we do NOT snap — player can park at any angle on any active axis
     }
 
     function onTouchStart(e) {
       if (e.touches.length === 1) {
         isDragging = true;
         previousMouseX = e.touches[0].clientX;
+        previousMouseY = e.touches[0].clientY;
         e.preventDefault();
       }
     }
@@ -370,48 +406,60 @@
       if (!isDragging || e.touches.length !== 1) return;
       
       const deltaX = e.touches[0].clientX - previousMouseX;
+      const deltaY = e.touches[0].clientY - previousMouseY;
       previousMouseX = e.touches[0].clientX;
+      previousMouseY = e.touches[0].clientY;
       
       const sensitivity = 0.008;
-      state.targetAngle += deltaX * sensitivity;
+      
+      if (state.multiAxisMode) {
+        state.targetRotY += deltaX * sensitivity;
+        state.targetRotX += deltaY * sensitivity * 0.9;
+      } else {
+        state.targetRotY += deltaX * sensitivity;
+      }
       e.preventDefault();
     }
 
-    function updateFluidRotation(deltaTime) {
-      // Spring-damper model (autonomous steering style)
-      const angleError = state.targetAngle - state.currentAngle;
-      
-      // Add spring force
-      state.angularVelocity += angleError * SPRING_STRENGTH * deltaTime;
-      
-      // Apply damping (frame-rate independent)
-      state.angularVelocity *= Math.pow(DAMPING, deltaTime * 60);
-      
-      // Integrate
-      state.currentAngle += state.angularVelocity * deltaTime;
-      
-      // Apply to cube
+    function updateFluidRotations(deltaTime) {
+      // === Yaw (Y) — original north/south pole style axis ===
+      const errorY = state.targetRotY - state.currentRotY;
+      state.velY += errorY * SPRING_STRENGTH * deltaTime;
+      state.velY *= Math.pow(DAMPING, deltaTime * 60);
+      state.currentRotY += state.velY * deltaTime;
+
+      // === Pitch (X) — new axis for full face exploration ===
+      const errorX = state.targetRotX - state.currentRotX;
+      state.velX += errorX * SPRING_STRENGTH * deltaTime;
+      state.velX *= Math.pow(DAMPING, deltaTime * 60);
+      state.currentRotX += state.velX * deltaTime;
+
+      // Apply both rotations to the cube (order matters — Y then X for intuitive feel)
       if (cube) {
-        cube.rotation.y = state.currentAngle;
+        cube.rotation.y = state.currentRotY;
+        cube.rotation.x = state.currentRotX;
       }
       
-      // Update shadow figures to react continuously to cube angle
+      // Update shadow figures to react continuously to full cube orientation
       if (shadowGroup && state.shadowsEnabled) {
         shadowGroup.children.forEach((shadow, i) => {
           const base = shadow.userData.baseAngle;
-          const influence = Math.sin(state.currentAngle * 0.8 + i) * 0.6;
           
-          // Smooth facing toward cube influence + some "soul" reactivity
-          shadow.rotation.y = base + influence + (state.currentAngle * 0.3);
+          // React to both Y and X rotation for richer "soul" presence
+          const influenceY = Math.sin(state.currentRotY * 0.8 + i) * 0.6;
+          const influenceX = Math.sin(state.currentRotX * 1.1 + i * 0.7) * 0.35;
           
-          // Subtle vertical bob based on angular velocity (feeling "alive")
-          const bob = Math.sin(Date.now() / 420 + i * 1.7) * 0.08 + 
-                      (Math.abs(state.angularVelocity) * 0.4);
+          shadow.rotation.y = base + influenceY + (state.currentRotY * 0.3);
+          shadow.rotation.x = influenceX * 0.6; // subtle pitch reaction
+          
+          // Subtle vertical bob based on combined velocity (feeling "alive")
+          const combinedVel = Math.abs(state.velY) + Math.abs(state.velX) * 0.6;
+          const bob = Math.sin(Date.now() / 420 + i * 1.7) * 0.08 + (combinedVel * 0.35);
           shadow.position.y = -0.3 + bob * 0.5;
           
-          // Emissive pulse when cube is moving fast (emotional state)
+          // Emissive pulse when cube is moving fast on any axis (emotional state)
           if (shadow.material) {
-            const pulse = 0.15 + Math.min(Math.abs(state.angularVelocity) * 0.8, 0.55);
+            const pulse = 0.15 + Math.min(combinedVel * 0.7, 0.55);
             shadow.material.emissive.setRGB(pulse * 0.1, pulse * 0.08, pulse * 0.15);
           }
         });
@@ -423,10 +471,10 @@
       
       const deltaTime = 1 / 60; // fixed timestep for stability
       
-      updateFluidRotation(deltaTime);
+      updateFluidRotations(deltaTime);
       
-      // Gentle camera orbit when idle (very subtle)
-      if (!isDragging && Math.abs(state.angularVelocity) < 0.3) {
+      // Gentle camera orbit when idle (very subtle) — respects multi-axis mode
+      if (!isDragging && Math.abs(state.velY) < 0.3 && Math.abs(state.velX) < 0.3) {
         camera.position.x = Math.sin(Date.now() / 18000) * 0.8;
         camera.lookAt(0, 0.2, 0);
       }
@@ -435,16 +483,49 @@
     }
 
     function resetCube() {
-      state.targetAngle = 0;
-      state.angularVelocity = 0;
-      // Let the spring bring it home naturally
+      // Reset both axes — spring will bring them home naturally
+      state.targetRotY = 0;
+      state.velY = 0;
+      state.targetRotX = 0;
+      state.velX = 0;
     }
 
     function randomizeAngle() {
-      // Pick a meaningful but non-cardinal angle
-      const angles = [0.7, 1.35, 2.1, 2.9, 3.6, 4.4, 5.1];
-      state.targetAngle = angles[Math.floor(Math.random() * angles.length)];
-      state.angularVelocity = (Math.random() - 0.5) * 4;
+      // Pick meaningful but non-cardinal angles on both axes
+      const anglesY = [0.7, 1.35, 2.1, 2.9, 3.6, 4.4, 5.1];
+      const anglesX = [-0.6, -0.3, 0.4, 0.9, 1.2];
+      
+      state.targetRotY = anglesY[Math.floor(Math.random() * anglesY.length)];
+      state.velY = (Math.random() - 0.5) * 4;
+      
+      state.targetRotX = anglesX[Math.floor(Math.random() * anglesX.length)];
+      state.velX = (Math.random() - 0.5) * 2.5;
+    }
+
+    function toggleMultiAxis() {
+      state.multiAxisMode = !state.multiAxisMode;
+      
+      const btn = document.getElementById('multiAxisBtn');
+      const status = document.getElementById('status');
+      const info = document.getElementById('info');
+      
+      if (state.multiAxisMode) {
+        btn.innerHTML = `Multi-Axis Orbit <span class="mode-badge">ON</span>`;
+        btn.classList.add('active');
+        
+        status.textContent = 'Multi-Axis ON • Drag horizontally (Yaw) or vertically (Pitch) • Park at any angle';
+        info.innerHTML = 
+          '<strong>Multi-Axis fluid mode active.</strong> Both axes use the same spring-damper steering model. ' +
+          'Explore all faces of the impossible cube with precise, weighted control.';
+      } else {
+        btn.innerHTML = `Multi-Axis Orbit <span class="mode-badge">OFF</span>`;
+        btn.classList.remove('active');
+        
+        status.textContent = 'Drag horizontally to rotate • Release to park at any angle';
+        info.innerHTML = 
+          '<strong>Fluid steering-style controls</strong> (spring + damping). ' +
+          'You can park the cube at any orientation. Shadows react continuously to rotation.';
+      }
     }
 
     function toggleShadows() {
@@ -453,12 +534,19 @@
         shadowGroup.visible = state.shadowsEnabled;
       }
       const status = document.getElementById('status');
+      const originalText = status.textContent;
+      
       status.textContent = state.shadowsEnabled 
-        ? 'Shadows enabled  they react to cube angle' 
+        ? 'Shadows enabled — they react to full cube orientation' 
         : 'Shadows hidden';
+      
       setTimeout(() => {
         if (status.textContent.includes('Shadows')) {
-          status.textContent = 'Drag to rotate the cube " Release to park at any angle';
+          if (state.multiAxisMode) {
+            status.textContent = 'Multi-Axis ON • Drag horizontally (Yaw) or vertically (Pitch) • Park at any angle';
+          } else {
+            status.textContent = 'Drag horizontally to rotate • Release to park at any angle';
+          }
         }
       }, 1400);
     }
@@ -471,6 +559,7 @@
         randomizeAngle();
       }
       if (e.key.toLowerCase() === 's') toggleShadows();
+      if (e.key.toLowerCase() === 'm') toggleMultiAxis();
     });
 
     // Boot
@@ -480,7 +569,8 @@
       
       // Gentle starting motion so player sees the fluid behavior immediately
       setTimeout(() => {
-        state.targetAngle = 1.1;
+        state.targetRotY = 1.1;
+        state.targetRotX = 0.35;
       }, 800);
       
       // Show a helpful tip once
@@ -495,7 +585,7 @@
         }
       }, 4200);
       
-      console.log('%c[Rippoutai] Fluid spring-damper controls active. v0.2 ready.', 'color:#64748b');
+      console.log('%c[Rippoutai] Multi-axis fluid spring-damper controls active. v0.2 ready.', 'color:#64748b');
     }
 
     window.onload = boot;
