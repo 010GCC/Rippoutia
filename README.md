@@ -1,11 +1,9 @@
-# Rippoutia
-3d puzzle game
-# geogelge.rippoutai / Rippoutai (離魂体)
+# Rippoutai (離魂体) — Detached Soul Prototype
 
 Indie game prototype exploring **impossible mechanics**, **shadow/soul figures**, and **grounded fantasy** with strong silhouettes and emotional authenticity (Yoshida-inspired).
 
 ## Project Vision
-A game about detached souls (離魂体), perspective shifts, and reconnection. The impossible cube serves as the central metaphor and primary interaction object. Shadow figures react with agency, memory, and emotional weight.
+A game about detached souls (離魂体 — "Rippoutai"), perspective shifts, and reconnection. The impossible cube serves as the central metaphor and primary interaction object. Shadow figures react with agency, memory, and emotional weight.
 
 Current prototype: Lightweight HTML/JS implementation (see `index.html`).
 
