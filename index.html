@@ -191,6 +191,12 @@
     Drag horizontally to rotate • Release to park at any angle
   </div>
 
+  <!-- Reactive Shadow State Indicator (driven by cube velocity + angle error) -->
+  <div style="position:absolute; top:118px; left:50%; transform:translateX(-50%); background:#121218; padding:4px 14px; border-radius:9999px; font-size:12px; color:#94a3b8; border:1px solid #1f2937; z-index:100; display:flex; align-items:center; gap:8px;">
+    <span style="opacity:0.7;">Shadow State:</span> 
+    <span id="shadowState" style="font-weight:600; color:#a5b4fc;">Attuned</span>
+  </div>
+
   <div class="legend">
     <div class="legend-item">
       <div class="legend-dot" style="background:#3b82f6;"></div>
@@ -239,7 +245,15 @@
       velX: 0,
       
       multiAxisMode: false, // Toggle for exploring all faces
-      shadowsEnabled: true
+      shadowsEnabled: true,
+      
+      // === Reactive Shadow State (0-3) driven by cube velocity + angle error ===
+      // 0 = Calm/Idle     (stable, grounded)
+      // 1 = Attuned/Echoing (listening, wisps flowing — default reactive)
+      // 2 = Destabilized    (turbulent, fragmenting — high error or speed)
+      // 3 = Reconnected     (coherent, hopeful glow — low error, resolved)
+      shadowState: 1,
+      targetShadowState: 1
     };
 
     const SPRING_STRENGTH = 22;
@@ -442,6 +456,26 @@
       
       // Update shadow figures to react continuously to full cube orientation
       if (shadowGroup && state.shadowsEnabled) {
+        // === Calculate reactive shadow state from cube metrics (fluid steering feel) ===
+        const combinedError = Math.abs(state.targetRotY - state.currentRotY) + Math.abs(state.targetRotX - state.currentRotX);
+        const combinedVel = Math.abs(state.velY) + Math.abs(state.velX) * 0.7;
+        
+        let newTargetState = 1; // default Attuned
+        if (combinedError > 0.6 || combinedVel > 2.5) {
+          newTargetState = 2; // Destabilized — high turbulence
+        } else if (combinedError < 0.12 && combinedVel < 0.4) {
+          newTargetState = 3; // Reconnected — resolved, hopeful
+        } else if (combinedVel < 0.8 && combinedError < 0.35) {
+          newTargetState = 0; // Calm — stable idle
+        }
+        
+        // Smooth state transition (same spring philosophy)
+        state.targetShadowState = newTargetState;
+        if (state.shadowState !== state.targetShadowState) {
+          // Simple lerp toward target state (or instant switch for prototype clarity)
+          state.shadowState = state.targetShadowState; // instant for clear feedback; can lerp if needed
+        }
+        
         shadowGroup.children.forEach((shadow, i) => {
           const base = shadow.userData.baseAngle;
           
@@ -453,16 +487,50 @@
           shadow.rotation.x = influenceX * 0.6; // subtle pitch reaction
           
           // Subtle vertical bob based on combined velocity (feeling "alive")
-          const combinedVel = Math.abs(state.velY) + Math.abs(state.velX) * 0.6;
           const bob = Math.sin(Date.now() / 420 + i * 1.7) * 0.08 + (combinedVel * 0.35);
           shadow.position.y = -0.3 + bob * 0.5;
           
-          // Emissive pulse when cube is moving fast on any axis (emotional state)
+          // === Visual state feedback on existing placeholder shadows ===
           if (shadow.material) {
-            const pulse = 0.15 + Math.min(combinedVel * 0.7, 0.55);
-            shadow.material.emissive.setRGB(pulse * 0.1, pulse * 0.08, pulse * 0.15);
+            let emissiveColor, scaleMod, opacityMod;
+            
+            switch (state.shadowState) {
+              case 0: // Calm
+                emissiveColor = { r: 0.08, g: 0.12, b: 0.18 };
+                scaleMod = 0.95;
+                opacityMod = 0.65;
+                break;
+              case 1: // Attuned / Echoing (default reactive)
+                emissiveColor = { r: 0.15, g: 0.22, b: 0.35 };
+                scaleMod = 1.0 + Math.sin(Date.now() / 380) * 0.03;
+                opacityMod = 0.78;
+                break;
+              case 2: // Destabilized / Fragmenting
+                emissiveColor = { r: 0.35, g: 0.08, b: 0.12 };
+                scaleMod = 1.08 + Math.sin(Date.now() / 120) * 0.06;
+                opacityMod = 0.85;
+                break;
+              case 3: // Reconnected / Hopeful
+                emissiveColor = { r: 0.25, g: 0.28, b: 0.45 };
+                scaleMod = 0.98;
+                opacityMod = 0.72;
+                break;
+            }
+            
+            shadow.material.emissive.setRGB(emissiveColor.r, emissiveColor.g, emissiveColor.b);
+            shadow.scale.setScalar(scaleMod);
+            if (shadow.material.opacity !== undefined) shadow.material.opacity = opacityMod;
           }
         });
+        
+        // Update UI shadow state indicator if present
+        const shadowStateEl = document.getElementById('shadowState');
+        if (shadowStateEl) {
+          const labels = ['Calm', 'Attuned', 'Destabilized', 'Reconnected'];
+          shadowStateEl.textContent = labels[state.shadowState] || 'Attuned';
+          shadowStateEl.style.color = state.shadowState === 2 ? '#f87171' : 
+                                     state.shadowState === 3 ? '#a5b4fc' : '#94a3b8';
+        }
       }
     }
 
