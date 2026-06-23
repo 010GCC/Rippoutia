@@ -7,9 +7,12 @@ A game about detached souls (離魂体 — "Rippoutai"), perspective shifts, and
 
 Current prototype: Lightweight HTML/JS implementation (see `index.html`).
 
-## Current State (v0.1)
-- Basic cube and shadow entity structure.
-- Discrete angle-based controls (snapping to 0°/90°/180° etc.) — currently feels imprecise and chunky.
+## Current State (June 2026)
+- **Fluid single-axis rotation** implemented using spring-damper steering model (precise, park-anywhere, no hard snapping).
+- **Multi-axis mode added** (toggleable): Horizontal drag = Yaw, Vertical drag = Pitch. Both axes use identical fluid characteristics for full exploration of all cube faces.
+- 3 reactive shadow/soul figures that respond continuously to cube orientation on both axes (facing, bobbing, emissive state).
+- Clean English UI, Three.js prototype, mouse + touch support, keyboard shortcuts.
+- v0.2 core loop is now significantly advanced — the cube feels alive and explorable.
 
 ## v0.2 Milestone Targets
 
@@ -75,6 +78,16 @@ function update(dt) {
 - Players can create and hold meaningful non-cardinal configurations.
 - Feels responsive and "alive" rather than mechanical.
 
+### Multi-Axis Extension (v0.2)
+The same spring-damper model was extended to a second axis (Pitch/X) and made toggleable via the **"Multi-Axis Orbit"** button.
+
+- **OFF** (default): Classic single-axis behavior (Yaw only) — preserves the original focused "north/south pole" interaction.
+- **ON**: Full two-axis control. Horizontal drag rotates Yaw, vertical drag rotates Pitch. Both axes use identical spring strength + damping values so the feel remains consistent and precise.
+- Purpose: Allow players to freely explore **all faces** of the impossible cube while maintaining the weighted, park-anywhere control quality.
+- Shadows were updated to react to the combined orientation for richer emotional agency.
+
+This directly advances the **Impossible Cube Core Loop** and **Shadow/Soul Figure Agency** v0.2 milestones.
+
 ## Character & Shadow Design Notes (Playability)
 
 To support fluid controls and readability:
@@ -86,7 +99,10 @@ To support fluid controls and readability:
 ## How to Run
 
 1. Open `index.html` in a modern browser.
-2. Interact with the prototype (current discrete controls will be replaced in v0.2 work).
+2. Drag horizontally to rotate the cube (fluid spring-damper control).
+3. Click **"Multi-Axis Orbit"** to toggle full two-axis exploration (horizontal = Yaw, vertical = Pitch).
+4. Use **R** to reset, **Space** to randomize, **S** to toggle shadows, or **M** for multi-axis.
+5. Shadows react continuously to the cube's full orientation.
 
 ## Development & Iteration
 
