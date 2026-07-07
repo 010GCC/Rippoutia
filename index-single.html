@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Rippoutai (離魂体) — v1.0</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Marcellus&family=Zen+Old+Mincho:wght@400&display=swap');
+
+    :root {
+      --ivory: #f9ecd3;
+      --ivory-dim: #e8d3ac;
+      --ink: rgba(34, 24, 14, 0.62);
+      --gold: #f5b45a;
+      --ember: #e0813f;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      background: #120d08;
+      font-family: 'Marcellus', serif;
+      color: var(--ivory);
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    canvas { display: block; }
+
+    /* ---------- HUD ---------- */
+
+    .hud {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 40;
+      opacity: 0;
+      transition: opacity 1.4s ease;
+    }
+    .hud.visible { opacity: 1; }
+
+    .brand {
+      position: absolute;
+      top: 18px;
+      left: 22px;
+      line-height: 1.25;
+    }
+    .brand .name {
+      font-size: 17px;
+      letter-spacing: 0.22em;
+    }
+    .brand .kanji {
+      font-family: 'Zen Old Mincho', serif;
+      font-size: 12px;
+      color: var(--ivory-dim);
+      letter-spacing: 0.5em;
+    }
+
+    .souls-count {
+      position: absolute;
+      top: 22px;
+      right: 24px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .soul-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 1px solid rgba(249, 236, 211, 0.55);
+      background: transparent;
+      transition: all 0.9s ease;
+    }
+    .soul-dot.lit {
+      background: var(--gold);
+      border-color: var(--gold);
+      box-shadow: 0 0 12px rgba(245, 180, 90, 0.9);
+    }
+
+    .status-wrap {
+      position: absolute;
+      top: 26px;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      max-width: min(560px, 86vw);
+    }
+    .status {
+      font-size: 16px;
+      letter-spacing: 0.06em;
+      color: var(--ivory);
+      text-shadow: 0 1px 10px rgba(40, 20, 5, 0.6);
+      transition: opacity 0.5s ease;
+      min-height: 22px;
+    }
+    .hold-track {
+      margin: 10px auto 0;
+      width: 150px;
+      height: 2px;
+      background: rgba(249, 236, 211, 0.25);
+      border-radius: 2px;
+      overflow: hidden;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+    .hold-track.on { opacity: 1; }
+    .hold-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--gold);
+      box-shadow: 0 0 8px rgba(245, 180, 90, 0.9);
+      transition: width 0.08s linear;
+    }
+
+    .footer-hint {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 12.5px;
+      letter-spacing: 0.14em;
+      color: rgba(249, 236, 211, 0.72);
+      text-shadow: 0 1px 8px rgba(40, 20, 5, 0.7);
+      white-space: nowrap;
+    }
+
+    .btn-reset {
+      position: absolute;
+      bottom: 16px;
+      right: 20px;
+      pointer-events: auto;
+      background: var(--ink);
+      color: var(--ivory-dim);
+      border: 1px solid rgba(249, 236, 211, 0.25);
+      border-radius: 9999px;
+      padding: 7px 16px;
+      font-family: 'Marcellus', serif;
+      font-size: 12px;
+      letter-spacing: 0.16em;
+      cursor: pointer;
+      backdrop-filter: blur(6px);
+      transition: all 0.25s ease;
+    }
+    .btn-reset:hover { color: var(--ivory); border-color: rgba(249, 236, 211, 0.5); }
+
+    /* ---------- Overlays (title / ending) ---------- */
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 60;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+      background:
+        radial-gradient(ellipse at 50% 120%, rgba(224, 129, 63, 0.35), transparent 60%),
+        linear-gradient(to bottom, rgba(18, 12, 6, 0.55), rgba(18, 12, 6, 0.78));
+      backdrop-filter: blur(2px);
+      transition: opacity 1.6s ease;
+    }
+    .overlay.hidden { opacity: 0; pointer-events: none; }
+
+    .overlay .kanji-big {
+      font-family: 'Zen Old Mincho', serif;
+      font-size: 22px;
+      letter-spacing: 0.9em;
+      margin-left: 0.9em;
+      color: var(--ivory-dim);
+    }
+    .overlay h1 {
+      font-size: clamp(44px, 9vw, 88px);
+      font-weight: 400;
+      letter-spacing: 0.14em;
+      margin: 10px 0 6px;
+      color: var(--ivory);
+      text-shadow: 0 0 40px rgba(245, 180, 90, 0.35);
+    }
+    .overlay .tagline {
+      font-size: 15px;
+      letter-spacing: 0.3em;
+      color: var(--ivory-dim);
+      margin-bottom: 44px;
+    }
+    .overlay .lore {
+      max-width: 420px;
+      font-size: 15px;
+      line-height: 1.8;
+      letter-spacing: 0.05em;
+      color: rgba(249, 236, 211, 0.85);
+      margin-bottom: 44px;
+    }
+    .btn-begin {
+      pointer-events: auto;
+      background: transparent;
+      color: var(--ivory);
+      border: 1px solid rgba(249, 236, 211, 0.6);
+      padding: 13px 46px;
+      font-family: 'Marcellus', serif;
+      font-size: 16px;
+      letter-spacing: 0.3em;
+      cursor: pointer;
+      transition: all 0.35s ease;
+    }
+    .btn-begin:hover {
+      background: rgba(245, 180, 90, 0.16);
+      border-color: var(--gold);
+      box-shadow: 0 0 30px rgba(245, 180, 90, 0.25);
+    }
+
+    #ending .lore { margin-bottom: 30px; }
+
+    .vignette {
+      position: absolute;
+      inset: 0;
+      z-index: 30;
+      pointer-events: none;
+      background: radial-gradient(ellipse at center, transparent 58%, rgba(24, 14, 5, 0.42) 100%);
+    }
+
+    .flash {
+      position: absolute;
+      inset: 0;
+      z-index: 50;
+      pointer-events: none;
+      background: radial-gradient(ellipse at center, rgba(255, 226, 170, 0.95), rgba(245, 180, 90, 0.5) 45%, transparent 75%);
+      opacity: 0;
+    }
+
+    @media (max-width: 640px) {
+      .status { font-size: 14px; }
+      .footer-hint { font-size: 11px; }
+      .brand .name { font-size: 14px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .overlay, .hud { transition-duration: 0.2s; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Title -->
+  <div class="overlay" id="title">
+    <div class="kanji-big">離魂体</div>
+    <h1>RIPPOUTAI</h1>
+    <div class="tagline">detached souls &nbsp;•&nbsp; impossible cube</div>
+    <div class="lore">
+      Three souls drifted loose from the world.<br>
+      They wait in the meadow, watching the cube.<br>
+      Each remembers one angle — the one where<br>
+      the impossible becomes true.
+    </div>
+    <button class="btn-begin" id="beginBtn">BEGIN</button>
+  </div>
+
+  <!-- Ending -->
+  <div class="overlay hidden" id="ending">
+    <div class="kanji-big">離魂体</div>
+    <h1 style="font-size:clamp(34px,6vw,60px);">RECONNECTED</h1>
+    <div class="lore" id="endingLore">
+      The souls found their angles.<br>
+      The cube opened, and the meadow kept the light.
+    </div>
+    <button class="btn-begin" id="againBtn">PLAY AGAIN</button>
+  </div>
+
+  <!-- HUD -->
+  <div class="hud" id="hud">
+    <div class="brand">
+      <div class="name">RIPPOUTAI</div>
+      <div class="kanji">離魂体</div>
+    </div>
+
+    <div class="souls-count" id="soulsCount">
+      <div class="soul-dot" id="dot0"></div>
+      <div class="soul-dot" id="dot1"></div>
+      <div class="soul-dot" id="dot2"></div>
+    </div>
+
+    <div class="status-wrap">
+      <div class="status" id="status"></div>
+      <div class="hold-track" id="holdTrack"><div class="hold-fill" id="holdFill"></div></div>
+    </div>
+
+    <div class="footer-hint" id="footerHint">drag to turn the cube &nbsp;•&nbsp; R to reset</div>
+    <button class="btn-reset" id="resetBtn">RESET</button>
+  </div>
+
+  <div class="vignette"></div>
+  <div class="flash" id="flash"></div>
+
+  <script>
+/* ============================================================
+   RIPPOUTAI (離魂体) — v1.0
+   Detached souls. Impossible cube. One meadow at golden hour.
+
+   Core loop:
+     - Rotate the cube with fluid spring-damper controls
+       (multi-axis, park-anywhere — carried forward from v0.2).
+     - Three souls each hold one hidden "resonance" orientation.
+     - Nearing a soul's angle wakes it: eyes brighten, it leans in,
+       and its impossible payoff blooms on the cube.
+     - Hold the angle to reconnect the soul.
+     - Reconnect all three -> the cube opens (finale).
+   ============================================================ */
+
+(function () {
+  'use strict';
+
+  // ---------- Tunables ----------
+  var SPRING_STRENGTH = 22;      // spring-damper steering model (v0.2 feel, preserved)
+  var DAMPING = 0.82;
+  var DRAG_SENSITIVITY = 0.008;
+  var PITCH_LIMIT = 1.15;        // keep pitch comfortable, avoid gimbal flips
+
+  var CUBE_SIZE = 2.6;
+  var BEAM_T = 0.26;
+
+  var ALIGN_SPREAD = 0.78;       // radians of forgiveness around a resonance
+  var ALIGN_SPREAD_FAR = 1.9;    // far-field "warmth" — eyes read warmer/colder
+  var ALIGN_THRESHOLD = 0.84;    // align factor needed to start the hold
+  var HOLD_TIME = 1.35;          // seconds to hold within threshold
+  var MAGNET_STRENGTH = 1.4;     // soul-link pull once parked close (per README design note)
+
+  var REDUCED_MOTION = window.matchMedia &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---------- Palette (from concept art) ----------
+  var COL = {
+    skyTop:    new THREE.Color(0xf7e8c6),
+    skyMid:    new THREE.Color(0xf2b96e),
+    skyBot:    new THREE.Color(0xdf8a48),
+    fog:       new THREE.Color(0xefb46c),
+    ground:    new THREE.Color(0x7d9c57),
+    beam:      new THREE.Color(0x2e2521),
+    beamGold:  new THREE.Color(0xd9973f),
+    soulBody:  new THREE.Color(0x0e0b09),
+    eye:       new THREE.Color(0xfff3d6),
+    gold:      new THREE.Color(0xf5b45a),
+    ember:     new THREE.Color(0xe0813f)
+  };
+
+  // ---------- State ----------
+  var scene, camera, renderer, clock;
+  var cubeGroup, beams = [], goldBeamSets = [];
+  var impossibleOverlays = [];   // depth-cheat beams (soul 0 payoff)
+  var ringArcs = [];             // scattered golden arcs (soul 1 payoff)
+  var core, coreLight;           // inner ember (soul 2 payoff + finale)
+  var souls = [];
+  var ambientMotes, moteData;
+  var streams = [];              // reconnection particle streams
+  var flowers = [];
+  var clouds = [];
+  var skyUniforms;
+  var sunSprite;
+
+  var state = {
+    phase: 'title',              // title | play | cinematic | finale | ended
+    currentRotY: 0.35, targetRotY: 0.35, velY: 0,
+    currentRotX: 0.10, targetRotX: 0.10, velX: 0,
+    dragging: false, lastX: 0, lastY: 0,
+    holdSoul: -1, holdTime: 0,
+    cinematicSoul: -1,
+    reconnected: 0,
+    idleTimer: 0, hintIndex: 0,
+    time: 0
+  };
+
+  var tweens = [];               // {t, dur, fn(k), done()}
+
+  // Resonance orientations (rotX pitch, rotY yaw) — one per soul.
+  // Spread across the orientation space so the search is a real exploration.
+  var RESONANCES = [
+    { rx:  0.52, ry:  0.615 },   // Sora — the classic impossible-cube corner
+    { rx: -0.38, ry:  2.45 },    // the twins — the ring completes
+    { rx:  0.78, ry:  4.35 }     // Yoru — the ember wakes
+  ];
+  var resQuats = RESONANCES.map(function (r) {
+    return new THREE.Quaternion().setFromEuler(new THREE.Euler(r.rx, r.ry, 0, 'XYZ'));
+  });
+
+  // Souls stand beyond the cube, facing it (and us) — eyes always readable,
+  // matching the concept art composition.
+  var SOUL_DEFS = [
+    { name: 'Sora',      pos: new THREE.Vector3(-3.4, 0, -1.0), waves: true,  pair: false },
+    { name: 'the twins', pos: new THREE.Vector3( 3.4, 0, -2.2), waves: false, pair: true  },
+    { name: 'Yoru',      pos: new THREE.Vector3(-5.9, 0, -4.4), waves: false, pair: false }
+  ];
+
+  var HINTS = [
+    'Turn the cube. Somewhere in its angles, the impossible becomes true.',
+    'Watch their eyes. They brighten when you are close.',
+    'Each soul remembers a different angle. Up and down matters too.',
+    'When a soul stirs — hold still.'
+  ];
+
+  // ---------- DOM ----------
+  var $ = function (id) { return document.getElementById(id); };
+  var statusEl, holdTrack, holdFill, footerHint, hud, flashEl;
+
+  function setStatus(text) {
+    if (statusEl.textContent === text) return;
+    statusEl.style.opacity = 0;
+    setTimeout(function () {
+      statusEl.textContent = text;
+      statusEl.style.opacity = 1;
+    }, 260);
+  }
+
+  // ============================================================
+  //  WORLD
+  // ============================================================
+
+  function initThree() {
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.insertBefore(renderer.domElement, document.body.firstChild);
+
+    scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(COL.fog.getHex(), 16, 52);
+
+    camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 200);
+    camera.position.set(0, 2.3, 8.2);
+    camera.lookAt(0, 0.8, 0);
+
+    clock = new THREE.Clock();
+
+    buildSky();
+    buildLights();
+    buildGround();
+    buildFlowers();
+    buildClouds();
+    buildCube();
+    buildSouls();
+    buildMotes();
+
+    window.addEventListener('resize', onResize);
+    bindInput();
+  }
+
+  function buildSky() {
+    skyUniforms = {
+      topColor: { value: COL.skyTop.clone() },
+      midColor: { value: COL.skyMid.clone() },
+      botColor: { value: COL.skyBot.clone() },
+      brightness: { value: 1.0 }
+    };
+    var skyMat = new THREE.ShaderMaterial({
+      uniforms: skyUniforms,
+      side: THREE.BackSide,
+      depthWrite: false,
+      vertexShader: [
+        'varying vec3 vPos;',
+        'void main() {',
+        '  vPos = position;',
+        '  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
+        '}'
+      ].join('\n'),
+      fragmentShader: [
+        'uniform vec3 topColor; uniform vec3 midColor; uniform vec3 botColor;',
+        'uniform float brightness;',
+        'varying vec3 vPos;',
+        'void main() {',
+        '  float h = normalize(vPos).y;',
+        '  vec3 c;',
+        '  if (h > 0.15) c = mix(midColor, topColor, smoothstep(0.15, 0.85, h));',
+        '  else c = mix(botColor, midColor, smoothstep(-0.15, 0.15, h));',
+        '  gl_FragColor = vec4(c * brightness, 1.0);',
+        '}'
+      ].join('\n')
+    });
+    var sky = new THREE.Mesh(new THREE.SphereGeometry(90, 24, 16), skyMat);
+    scene.add(sky);
+
+    // Low sun glow behind the cube
+    var sunTex = makeRadialTexture('rgba(255,236,190,1)', 'rgba(242,185,110,0)');
+    sunSprite = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: sunTex, transparent: true, opacity: 0.9, depthWrite: false
+    }));
+    sunSprite.position.set(0, 2.4, -42);
+    sunSprite.scale.set(34, 34, 1);
+    scene.add(sunSprite);
+  }
+
+  function buildLights() {
+    scene.add(new THREE.HemisphereLight(0xf6d9a0, 0x5a6b3a, 0.75));
+
+    var sun = new THREE.DirectionalLight(0xffe0b0, 0.85);
+    sun.position.set(-4, 6, -8);
+    scene.add(sun);
+
+    var fill = new THREE.DirectionalLight(0xf2b96e, 0.35);
+    fill.position.set(5, 3, 8);
+    scene.add(fill);
+  }
+
+  function makeRadialTexture(inner, outer) {
+    var c = document.createElement('canvas');
+    c.width = c.height = 128;
+    var g = c.getContext('2d');
+    var grad = g.createRadialGradient(64, 64, 4, 64, 64, 64);
+    grad.addColorStop(0, inner);
+    grad.addColorStop(1, outer);
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 128, 128);
+    return new THREE.CanvasTexture(c);
+  }
+
+  function makeGroundTexture() {
+    var c = document.createElement('canvas');
+    c.width = c.height = 512;
+    var g = c.getContext('2d');
+    g.fillStyle = '#7d9c57';
+    g.fillRect(0, 0, 512, 512);
+    // painterly dabs
+    for (var i = 0; i < 900; i++) {
+      var shade = Math.random();
+      g.fillStyle = shade < 0.5
+        ? 'rgba(96,124,64,' + (0.10 + Math.random() * 0.18) + ')'
+        : 'rgba(160,180,102,' + (0.08 + Math.random() * 0.16) + ')';
+      var x = Math.random() * 512, y = Math.random() * 512;
+      g.beginPath();
+      g.ellipse(x, y, 3 + Math.random() * 9, 1.5 + Math.random() * 4,
+        Math.random() * Math.PI, 0, Math.PI * 2);
+      g.fill();
+    }
+    var tex = new THREE.CanvasTexture(c);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(6, 6);
+    return tex;
+  }
+
+  function buildGround() {
+    var mat = new THREE.MeshLambertMaterial({ map: makeGroundTexture() });
+    var ground = new THREE.Mesh(new THREE.CircleGeometry(60, 48), mat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -1.55;
+    scene.add(ground);
+
+    // Soft contact shadow under the cube
+    var shadowTex = makeRadialTexture('rgba(30,25,15,0.5)', 'rgba(30,25,15,0)');
+    var shadow = new THREE.Mesh(
+      new THREE.PlaneGeometry(5.2, 5.2),
+      new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false })
+    );
+    shadow.rotation.x = -Math.PI / 2;
+    shadow.position.y = -1.53;
+    scene.add(shadow);
+  }
+
+  function buildFlowers() {
+    var headColors = [0xf6f0e2, 0xf2d34d, 0xe2654a, 0xb18ae0, 0xf6f0e2];
+    var stemMat = new THREE.MeshLambertMaterial({ color: 0x516d36 });
+    var stemGeo = new THREE.CylinderGeometry(0.012, 0.016, 0.22, 4);
+    var headGeo = new THREE.SphereGeometry(0.045, 6, 5);
+
+    for (var i = 0; i < 90; i++) {
+      var a = Math.random() * Math.PI * 2;
+      var r = 2.6 + Math.random() * 11;
+      var x = Math.cos(a) * r;
+      var z = Math.sin(a) * r * 0.85 + 0.5;
+      if (z > 7) continue; // keep out of the immediate foreground blur zone
+
+      var f = new THREE.Group();
+      var stem = new THREE.Mesh(stemGeo, stemMat);
+      stem.position.y = 0.11;
+      f.add(stem);
+      var head = new THREE.Mesh(headGeo, new THREE.MeshLambertMaterial({
+        color: headColors[Math.floor(Math.random() * headColors.length)],
+        emissive: 0x241a08
+      }));
+      head.position.y = 0.24;
+      f.add(head);
+      f.position.set(x, -1.55, z);
+      f.userData.phase = Math.random() * Math.PI * 2;
+      scene.add(f);
+      flowers.push(f);
+    }
+  }
+
+  function buildClouds() {
+    var c = document.createElement('canvas');
+    c.width = 256; c.height = 128;
+    var g = c.getContext('2d');
+    for (var b = 0; b < 7; b++) {
+      var grad = g.createRadialGradient(
+        40 + Math.random() * 176, 50 + Math.random() * 40, 2,
+        40 + Math.random() * 176, 50 + Math.random() * 40, 34 + Math.random() * 26
+      );
+      grad.addColorStop(0, 'rgba(252,238,210,0.55)');
+      grad.addColorStop(1, 'rgba(252,238,210,0)');
+      g.fillStyle = grad;
+      g.fillRect(0, 0, 256, 128);
+    }
+    var tex = new THREE.CanvasTexture(c);
+
+    for (var i = 0; i < 7; i++) {
+      var s = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: tex, transparent: true, depthWrite: false,
+        opacity: 0.5 + Math.random() * 0.3
+      }));
+      s.position.set((Math.random() - 0.5) * 60, 5 + Math.random() * 8, -26 - Math.random() * 18);
+      s.scale.set(14 + Math.random() * 10, 5 + Math.random() * 3, 1);
+      s.userData.speed = 0.08 + Math.random() * 0.1;
+      scene.add(s);
+      clouds.push(s);
+    }
+  }
+
+  // ============================================================
+  //  THE IMPOSSIBLE CUBE
+  // ============================================================
+
+  function buildCube() {
+    cubeGroup = new THREE.Group();
+    cubeGroup.position.y = 0.85;
+    scene.add(cubeGroup);
+
+    var h = CUBE_SIZE / 2;
+    var t = BEAM_T;
+    var beamMatProto = new THREE.MeshPhongMaterial({
+      color: COL.beam.getHex(), shininess: 8,
+      emissive: 0x120c08
+    });
+
+    // 12 edges: [center, size, tag]
+    var edges = [
+      // 4 verticals (tag: v + corner)
+      [[-h, 0, -h], [t, CUBE_SIZE + t, t], 'v-bl'],
+      [[ h, 0, -h], [t, CUBE_SIZE + t, t], 'v-br'],
+      [[-h, 0,  h], [t, CUBE_SIZE + t, t], 'v-fl'],
+      [[ h, 0,  h], [t, CUBE_SIZE + t, t], 'v-fr'],
+      // 4 top horizontals
+      [[0,  h, -h], [CUBE_SIZE + t, t, t], 'h-tb'],
+      [[0,  h,  h], [CUBE_SIZE + t, t, t], 'h-tf'],
+      [[-h, h,  0], [t, t, CUBE_SIZE + t], 'h-tl'],
+      [[ h, h,  0], [t, t, CUBE_SIZE + t], 'h-tr'],
+      // 4 bottom horizontals
+      [[0, -h, -h], [CUBE_SIZE + t, t, t], 'h-bb'],
+      [[0, -h,  h], [CUBE_SIZE + t, t, t], 'h-bf'],
+      [[-h, -h, 0], [t, t, CUBE_SIZE + t], 'h-bl'],
+      [[ h, -h, 0], [t, t, CUBE_SIZE + t], 'h-br']
+    ];
+
+    edges.forEach(function (e) {
+      var geo = new THREE.BoxGeometry(e[1][0], e[1][1], e[1][2]);
+      var mesh = new THREE.Mesh(geo, beamMatProto.clone());
+      mesh.position.set(e[0][0], e[0][1], e[0][2]);
+      mesh.userData.tag = e[2];
+      cubeGroup.add(mesh);
+      beams.push(mesh);
+    });
+
+    // Beams that turn gold, one set per reconnected soul (4 beams each)
+    goldBeamSets = [
+      pickBeams(['v-bl', 'h-tb', 'h-tl', 'h-bb']),
+      pickBeams(['v-fr', 'h-tf', 'h-tr', 'h-bf']),
+      pickBeams(['v-br', 'v-fl', 'h-bl', 'h-br'])
+    ];
+
+    // --- Payoff 0: the impossible weave (Sora) ---
+    // Duplicates of two rear beams drawn with depth testing off. As the
+    // player nears Sora's angle they fade in, and the far beams appear to
+    // pass IN FRONT of the near ones — the Escher read, live in 3D.
+    ['v-bl', 'h-tb'].forEach(function (tag) {
+      var src = pickBeams([tag])[0];
+      var ghost = new THREE.Mesh(src.geometry.clone(), new THREE.MeshPhongMaterial({
+        color: COL.beam.getHex(), shininess: 8, emissive: 0x1a0f08,
+        transparent: true, opacity: 0, depthTest: false
+      }));
+      ghost.position.copy(src.position);
+      ghost.renderOrder = 10;
+      cubeGroup.add(ghost);
+      impossibleOverlays.push(ghost);
+      goldBeamSets[0].push(ghost); // the weave gilds with its beams
+    });
+
+    // --- Payoff 1: the scattered ring (the twins) ---
+    // Three golden arcs hang inside the frame at different depths. From
+    // exactly one orientation they stack into a single perfect circle.
+    var viewLocal = cameraDirInCubeLocal(resQuats[1]); // camera axis, cube-local, at resonance 1
+    for (var k = 0; k < 3; k++) {
+      var arc = new THREE.Mesh(
+        new THREE.TorusGeometry(0.82, 0.045, 8, 40, (Math.PI * 2) / 3 - 0.12),
+        new THREE.MeshBasicMaterial({
+          color: COL.gold.getHex(), transparent: true, opacity: 0.28,
+          depthWrite: false
+        })
+      );
+      // Orient each arc to face the camera at resonance 1, rotated 120° apart,
+      // then push it along the local view axis so depth scatters them.
+      arc.quaternion.copy(quatFacing(viewLocal));
+      arc.rotateZ(k * (Math.PI * 2) / 3);
+      arc.position.copy(viewLocal.clone().multiplyScalar((k - 1) * 0.55));
+      cubeGroup.add(arc);
+      ringArcs.push(arc);
+    }
+
+    // --- Payoff 2 + finale: the ember core (Yoru) ---
+    core = new THREE.Mesh(
+      new THREE.SphereGeometry(0.34, 20, 16),
+      new THREE.MeshBasicMaterial({
+        color: 0xffd9a0, transparent: true, opacity: 0.0, depthWrite: false
+      })
+    );
+    cubeGroup.add(core);
+
+    var glowTex = makeRadialTexture('rgba(255,214,150,0.9)', 'rgba(255,180,90,0)');
+    var glow = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: glowTex, transparent: true, opacity: 0, depthWrite: false
+    }));
+    glow.scale.set(3.4, 3.4, 1);
+    core.userData.glow = glow;
+    cubeGroup.add(glow);
+
+    coreLight = new THREE.PointLight(0xffb45a, 0, 14);
+    cubeGroup.add(coreLight);
+  }
+
+  function pickBeams(tags) {
+    return beams.filter(function (b) { return tags.indexOf(b.userData.tag) !== -1; });
+  }
+
+  // Camera view direction expressed in the cube's local frame when the cube
+  // sits at the given resonance orientation.
+  function cameraDirInCubeLocal(resQuat) {
+    var camDir = new THREE.Vector3(0, 0.8, 0)
+      .sub(camera ? camera.position : new THREE.Vector3(0, 2.3, 8.2))
+      .normalize();
+    return camDir.applyQuaternion(resQuat.clone().invert()).normalize();
+  }
+
+  // Quaternion that rotates +Z (torus normal) to the given direction.
+  function quatFacing(dir) {
+    return new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir.clone().normalize());
+  }
+
+  // ============================================================
+  //  SOULS
+  // ============================================================
+
+  function buildSouls() {
+    SOUL_DEFS.forEach(function (def, i) {
+      var g = new THREE.Group();
+      g.position.copy(def.pos);
+      g.position.y = -1.55;
+
+      if (def.pair) {
+        addFigure(g, -0.32, 0.82, def);
+        addFigure(g, 0.32, 0.74, def);
+        // held hands: a small bridge between them
+        var link = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.028, 0.028, 0.42, 5),
+          new THREE.MeshLambertMaterial({ color: COL.soulBody.getHex() })
+        );
+        link.rotation.z = Math.PI / 2;
+        link.position.set(0, 0.42, 0);
+        g.add(link);
+      } else {
+        addFigure(g, 0, 1.0, def);
+      }
+
+      // contact shadow
+      var sTex = makeRadialTexture('rgba(28,22,12,0.45)', 'rgba(28,22,12,0)');
+      var sh = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.4, 1.4),
+        new THREE.MeshBasicMaterial({ map: sTex, transparent: true, depthWrite: false })
+      );
+      sh.rotation.x = -Math.PI / 2;
+      sh.position.y = 0.015;
+      g.add(sh);
+
+      g.lookAt(new THREE.Vector3(0, -1.55 + 1, 0)); // face the cube
+      scene.add(g);
+
+      souls.push({
+        def: def,
+        group: g,
+        homePos: g.position.clone(),
+        align: 0,
+        warmth: 0,
+        reconnected: false,
+        eyes: g.userData.eyes || [],
+        arm: g.userData.arm || null,
+        phase: Math.random() * Math.PI * 2
+      });
+    });
+  }
+
+  function addFigure(parent, offsetX, scale, def) {
+    var bodyMat = new THREE.MeshLambertMaterial({ color: COL.soulBody.getHex() });
+
+    var fig = new THREE.Group();
+    fig.position.x = offsetX;
+    fig.scale.setScalar(scale);
+
+    // body: soft teardrop silhouette
+    var body = new THREE.Mesh(new THREE.SphereGeometry(0.34, 12, 12), bodyMat);
+    body.scale.set(0.9, 1.55, 0.9);
+    body.position.y = 0.52;
+    fig.add(body);
+
+    // head
+    var head = new THREE.Mesh(new THREE.SphereGeometry(0.235, 14, 12), bodyMat);
+    head.position.y = 1.18;
+    fig.add(head);
+
+    // eyes: the landmark feature — strong at any angle
+    parent.userData.eyes = parent.userData.eyes || [];
+    [-0.085, 0.085].forEach(function (ex) {
+      var eye = new THREE.Mesh(
+        new THREE.SphereGeometry(0.038, 8, 8),
+        new THREE.MeshBasicMaterial({ color: COL.eye.getHex(), transparent: true, opacity: 0.55 })
+      );
+      eye.position.set(ex, 1.21, 0.205);
+      fig.add(eye);
+      parent.userData.eyes.push(eye);
+    });
+
+    // waving arm (Sora)
+    if (def.waves && !parent.userData.arm) {
+      var arm = new THREE.Group();
+      var limb = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.045, 0.055, 0.52, 6), bodyMat
+      );
+      limb.position.y = 0.26;
+      arm.add(limb);
+      arm.position.set(0.30, 0.86, 0);
+      arm.rotation.z = -0.6;
+      fig.add(arm);
+      parent.userData.arm = arm;
+    }
+
+    parent.add(fig);
+  }
+
+  // ============================================================
+  //  PARTICLES
+  // ============================================================
+
+  function buildMotes() {
+    var count = REDUCED_MOTION ? 40 : 110;
+    var geo = new THREE.BufferGeometry();
+    var pos = new Float32Array(count * 3);
+    moteData = [];
+    for (var i = 0; i < count; i++) {
+      var x = (Math.random() - 0.5) * 20;
+      var y = -1.4 + Math.random() * 6;
+      var z = (Math.random() - 0.5) * 16;
+      pos[i * 3] = x; pos[i * 3 + 1] = y; pos[i * 3 + 2] = z;
+      moteData.push({ vy: 0.06 + Math.random() * 0.12, phase: Math.random() * Math.PI * 2 });
+    }
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    ambientMotes = new THREE.Points(geo, new THREE.PointsMaterial({
+      color: 0xffe2ad, size: 0.06, transparent: true, opacity: 0.65,
+      depthWrite: false, sizeAttenuation: true
+    }));
+    scene.add(ambientMotes);
+  }
+
+  // A stream of motes flowing from a soul into the cube on reconnection.
+  function spawnStream(fromPos) {
+    var count = 60;
+    var geo = new THREE.BufferGeometry();
+    var pos = new Float32Array(count * 3);
+    var parts = [];
+    for (var i = 0; i < count; i++) {
+      var p = fromPos.clone().add(new THREE.Vector3(
+        (Math.random() - 0.5) * 0.7,
+        Math.random() * 1.4,
+        (Math.random() - 0.5) * 0.7
+      ));
+      pos[i * 3] = p.x; pos[i * 3 + 1] = p.y; pos[i * 3 + 2] = p.z;
+      parts.push({ p: p, delay: Math.random() * 0.5, t: 0 });
+    }
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    var pts = new THREE.Points(geo, new THREE.PointsMaterial({
+      color: 0xffcf8a, size: 0.09, transparent: true, opacity: 0.95,
+      depthWrite: false, sizeAttenuation: true
+    }));
+    scene.add(pts);
+    streams.push({ mesh: pts, parts: parts, target: new THREE.Vector3(0, 0.85, 0), life: 0 });
+  }
+
+  // ============================================================
+  //  INPUT (fluid spring-damper, multi-axis — v0.2 model, always on)
+  // ============================================================
+
+  function bindInput() {
+    var canvas = renderer.domElement;
+
+    function down(x, y) {
+      if (state.phase !== 'play') return;
+      state.dragging = true;
+      state.lastX = x; state.lastY = y;
+      state.idleTimer = 0;
+    }
+    function move(x, y) {
+      if (!state.dragging || state.phase !== 'play') return;
+      var dx = x - state.lastX, dy = y - state.lastY;
+      state.lastX = x; state.lastY = y;
+      state.targetRotY += dx * DRAG_SENSITIVITY;
+      state.targetRotX += dy * DRAG_SENSITIVITY * 0.9;
+      state.targetRotX = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, state.targetRotX));
+      state.idleTimer = 0;
+    }
+    function up() { state.dragging = false; }
+
+    canvas.addEventListener('mousedown', function (e) { down(e.clientX, e.clientY); });
+    canvas.addEventListener('mousemove', function (e) { move(e.clientX, e.clientY); });
+    window.addEventListener('mouseup', up);
+
+    canvas.addEventListener('touchstart', function (e) {
+      if (e.touches.length === 1) { down(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); }
+    }, { passive: false });
+    canvas.addEventListener('touchmove', function (e) {
+      if (e.touches.length === 1) { move(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); }
+    }, { passive: false });
+    window.addEventListener('touchend', up);
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'r' || e.key === 'R') resetCube();
+    });
+
+    $('resetBtn').addEventListener('click', resetCube);
+    $('beginBtn').addEventListener('click', begin);
+    $('againBtn').addEventListener('click', restart);
+  }
+
+  function resetCube() {
+    if (state.phase !== 'play') return;
+    state.targetRotY = 0.35; state.velY = 0;
+    state.targetRotX = 0.10; state.velX = 0;
+  }
+
+  // ============================================================
+  //  GAME FLOW
+  // ============================================================
+
+  function begin() {
+    $('title').classList.add('hidden');
+    hud.classList.add('visible');
+    state.phase = 'play';
+    setStatus(HINTS[0]);
+    // a gentle opening motion so the fluid feel is felt immediately
+    setTimeout(function () {
+      state.targetRotY = 1.15;
+      state.targetRotX = 0.32;
+    }, 700);
+  }
+
+  function restart() {
+    $('ending').classList.add('hidden');
+    // reset world
+    state.reconnected = 0;
+    state.holdSoul = -1; state.holdTime = 0;
+    state.currentRotY = 0.35; state.targetRotY = 0.35; state.velY = 0;
+    state.currentRotX = 0.10; state.targetRotX = 0.10; state.velX = 0;
+    state.idleTimer = 0; state.hintIndex = 0;
+
+    souls.forEach(function (s, i) {
+      s.reconnected = false;
+      s.group.visible = true;
+      s.group.position.copy(s.homePos);
+      s.group.scale.setScalar(1);
+      $('dot' + i).classList.remove('lit');
+    });
+    beams.forEach(function (b) {
+      b.material.color.copy(COL.beam);
+      b.material.emissive.setHex(0x120c08);
+    });
+    impossibleOverlays.forEach(function (m) {
+      m.material.opacity = 0;
+      m.material.color.copy(COL.beam);
+      m.material.emissive.setHex(0x1a0f08);
+    });
+    ringArcs.forEach(function (arc) {
+      arc.material.opacity = 0.28;
+      arc.material.color.copy(COL.gold);
+    });
+    cubeGroup.position.y = 0.85;
+    state.cinematicSoul = -1;
+    holdTrack.classList.remove('on');
+    holdFill.style.width = '0%';
+    souls.forEach(function (s) {
+      s.align = 0;
+      s.eyes.forEach(function (eye) { eye.material.opacity = 0.55; eye.scale.setScalar(1); });
+    });
+    core.material.opacity = 0;
+    core.userData.glow.material.opacity = 0;
+    core.scale.setScalar(1);
+    coreLight.intensity = 0;
+    skyUniforms.brightness.value = 1.0;
+    tweens.length = 0;
+
+    state.phase = 'play';
+    setStatus(HINTS[0]);
+  }
+
+  function startReconnection(i) {
+    var s = souls[i];
+    state.phase = 'cinematic';
+    state.cinematicSoul = i;
+    state.holdSoul = -1; state.holdTime = 0;
+    holdTrack.classList.remove('on');
+    holdFill.style.width = '0%';
+
+    // Sora's trophy: the impossible weave stays, and turns gold with its beams
+    if (i === 0) {
+      addTween(1.2, function (k) {
+        impossibleOverlays.forEach(function (m) {
+          m.material.opacity = Math.max(m.material.opacity, k);
+        });
+      });
+    }
+
+    // spring the cube gently to the exact resonance
+    var res = RESONANCES[i];
+    var twoPi = Math.PI * 2;
+    var ry = res.ry;
+    // choose the equivalent yaw nearest the current one so the spring takes the short way
+    while (ry - state.currentRotY > Math.PI) ry -= twoPi;
+    while (ry - state.currentRotY < -Math.PI) ry += twoPi;
+    state.targetRotY = ry;
+    state.targetRotX = res.rx;
+
+    setStatus(s.def.name === 'the twins'
+      ? 'The twins remember the way home.'
+      : s.def.name + ' remembers the way home.');
+
+    spawnStream(s.group.position.clone().setY(-0.6));
+
+    // soul drifts to the cube and dissolves
+    var from = s.group.position.clone();
+    var to = new THREE.Vector3(0, -0.4, 0.6);
+    addTween(2.4, function (k) {
+      var e = easeInOut(k);
+      s.group.position.lerpVectors(from, to, e);
+      s.group.scale.setScalar(1 - e * 0.92);
+      s.eyes.forEach(function (eye) { eye.material.opacity = 1 - e; });
+    }, function () {
+      s.group.visible = false;
+      s.reconnected = true;
+      state.cinematicSoul = -1;
+      state.reconnected++;
+      $('dot' + i).classList.add('lit');
+      gildBeams(i);
+      flashScreen(0.35);
+
+      if (state.reconnected >= 3) {
+        setTimeout(startFinale, 900);
+      } else {
+        state.phase = 'play';
+        setStatus(state.reconnected === 1
+          ? 'Two souls remain. Each remembers a different angle.'
+          : 'One soul remains.');
+      }
+    });
+  }
+
+  function gildBeams(i) {
+    var set = goldBeamSets[i];
+    addTween(1.2, function (k) {
+      set.forEach(function (b) {
+        b.material.color.copy(COL.beam).lerp(COL.beamGold, k);
+        b.material.emissive.setRGB(0.25 * k, 0.14 * k, 0.03 * k);
+      });
+    });
+  }
+
+  function startFinale() {
+    state.phase = 'finale';
+    setStatus('The cube opens.');
+
+    addTween(4.2, function (k) {
+      var e = easeInOut(k);
+      core.material.opacity = e;
+      core.scale.setScalar(1 + e * 1.6);
+      core.userData.glow.material.opacity = e * 0.95;
+      core.userData.glow.scale.setScalar(3.4 + e * 5);
+      coreLight.intensity = e * 3.2;
+      skyUniforms.brightness.value = 1 + e * 0.22;
+      // slow reverent turn to Yoru's angle already set; add a gentle lift
+      cubeGroup.position.y = 0.85 + e * 0.5;
+    }, function () {
+      flashScreen(1.0);
+      setTimeout(function () {
+        state.phase = 'ended';
+        $('ending').classList.remove('hidden');
+      }, 700);
+    });
+
+    // rising motes everywhere
+    if (!REDUCED_MOTION) {
+      spawnStream(new THREE.Vector3(-3, -1, 1));
+      spawnStream(new THREE.Vector3(3, -1, 1.5));
+      spawnStream(new THREE.Vector3(0, -1, -3));
+    }
+  }
+
+  function flashScreen(strength) {
+    flashEl.style.transition = 'none';
+    flashEl.style.opacity = strength;
+    requestAnimationFrame(function () {
+      flashEl.style.transition = 'opacity 1.4s ease';
+      flashEl.style.opacity = 0;
+    });
+  }
+
+  // ============================================================
+  //  UPDATE LOOP
+  // ============================================================
+
+  function addTween(dur, fn, done) {
+    tweens.push({ t: 0, dur: dur, fn: fn, done: done });
+  }
+  function easeInOut(k) { return k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; }
+
+  var qCur = new THREE.Quaternion();
+  var eulTmp = new THREE.Euler();
+
+  function updateRotation(dt) {
+    var errY = state.targetRotY - state.currentRotY;
+    state.velY += errY * SPRING_STRENGTH * dt;
+    state.velY *= Math.pow(DAMPING, dt * 60);
+    state.currentRotY += state.velY * dt;
+
+    var errX = state.targetRotX - state.currentRotX;
+    state.velX += errX * SPRING_STRENGTH * dt;
+    state.velX *= Math.pow(DAMPING, dt * 60);
+    state.currentRotX += state.velX * dt;
+
+    cubeGroup.rotation.set(state.currentRotX, state.currentRotY, 0);
+    if (state.phase !== 'finale' && state.phase !== 'ended') {
+      cubeGroup.position.y = 0.85 + Math.sin(state.time * 0.8) * 0.045;
+    }
+  }
+
+  function angleTo(i) {
+    eulTmp.set(state.currentRotX, state.currentRotY, 0, 'XYZ');
+    qCur.setFromEuler(eulTmp);
+    var d = Math.abs(qCur.dot(resQuats[i]));
+    return 2 * Math.acos(Math.min(1, d));
+  }
+  function clamp01(v) { return Math.max(0, Math.min(1, v)); }
+
+  function updateSouls(dt) {
+    var best = -1, bestAlign = 0;
+
+    souls.forEach(function (s, i) {
+      if (s.reconnected || state.phase === 'cinematic') {
+        if (!s.reconnected && i !== state.cinematicSoul) idleSoul(s, dt, 0);
+        return;
+      }
+      var angle = angleTo(i);
+      var a = clamp01(1 - angle / ALIGN_SPREAD);
+      var aFar = clamp01(1 - angle / ALIGN_SPREAD_FAR);
+      s.align += (a - s.align) * Math.min(1, dt * 6); // smooth
+      s.warmth = aFar;
+      idleSoul(s, dt, s.align);
+      if (s.align > bestAlign) { bestAlign = s.align; best = i; }
+      updatePayoff(i, s.align);
+    });
+
+    // Soul-link magnetism: once the player has parked close, the resonance
+    // draws the cube the last small distance (deliberate snap point only).
+    if (state.phase === 'play' && best !== -1 && bestAlign > 0.62 && !state.dragging) {
+      var res = RESONANCES[best];
+      var ryNear = res.ry;
+      while (ryNear - state.targetRotY > Math.PI) ryNear -= Math.PI * 2;
+      while (ryNear - state.targetRotY < -Math.PI) ryNear += Math.PI * 2;
+      var pull = Math.min(1, dt * MAGNET_STRENGTH) * (bestAlign - 0.62) / 0.38;
+      state.targetRotY += (ryNear - state.targetRotY) * pull;
+      state.targetRotX += (res.rx - state.targetRotX) * pull;
+    }
+
+    // hold-to-reconnect
+    if (state.phase === 'play') {
+      if (best !== -1 && bestAlign > ALIGN_THRESHOLD) {
+        if (state.holdSoul !== best) { state.holdSoul = best; state.holdTime = 0; }
+        state.holdTime += dt;
+        holdTrack.classList.add('on');
+        holdFill.style.width = Math.min(100, (state.holdTime / HOLD_TIME) * 100) + '%';
+        var nm = souls[best].def.name;
+        setStatus(nm === 'the twins' ? 'The twins are listening — hold this angle.'
+                                     : nm + ' is listening — hold this angle.');
+        if (state.holdTime >= HOLD_TIME) startReconnection(best);
+      } else {
+        if (state.holdSoul !== -1) {
+          state.holdSoul = -1; state.holdTime = 0;
+          holdTrack.classList.remove('on');
+          holdFill.style.width = '0%';
+        }
+        if (best !== -1 && bestAlign > 0.55) {
+          var nm2 = souls[best].def.name;
+          setStatus(nm2 === 'the twins' ? 'The twins stir…' : nm2 + ' stirs…');
+        }
+      }
+    }
+  }
+
+  function idleSoul(s, dt, align) {
+    s.phase += dt;
+    var g = s.group;
+
+    // breathe / bob
+    var bob = Math.sin(s.phase * 1.6) * 0.035;
+    g.position.y = -1.55 + bob * (REDUCED_MOTION ? 0.3 : 1);
+
+    // lean toward the cube as alignment grows
+    if (!s.reconnected && state.phase === 'play') {
+      var toward = new THREE.Vector3(0, -1.55, 0).sub(s.homePos).multiplyScalar(align * 0.16);
+      g.position.x = s.homePos.x + toward.x;
+      g.position.z = s.homePos.z + toward.z;
+    }
+
+    // eyes brighten with alignment — the primary tell.
+    // Far-field warmth gives a warmer/colder read from any distance;
+    // near alignment pushes them to full bloom.
+    var warmth = s.warmth || 0;
+    var eyeGlow = 0.35 + warmth * 0.35 + align * 0.35 + Math.sin(s.phase * 2.2) * 0.05;
+    s.eyes.forEach(function (eye) {
+      eye.material.opacity = Math.min(1, eyeGlow);
+      var sc = 1 + align * 0.9;
+      eye.scale.setScalar(sc);
+    });
+
+    // Sora waves — more eagerly when close
+    if (s.arm) {
+      var wave = Math.sin(s.phase * (2.5 + align * 4)) * (0.25 + align * 0.45);
+      s.arm.rotation.z = -0.6 + wave;
+    }
+  }
+
+  function updatePayoff(i, align) {
+    if (i === 0) {
+      // impossible weave fades in
+      impossibleOverlays.forEach(function (m) {
+        m.material.opacity = Math.pow(align, 1.4);
+      });
+    } else if (i === 1) {
+      // arcs brighten and (by orientation) converge into the ring
+      ringArcs.forEach(function (arc) {
+        arc.material.opacity = 0.28 + align * 0.72;
+        arc.material.color.copy(COL.gold).lerp(new THREE.Color(0xfff0c8), align * 0.6);
+      });
+    } else if (i === 2) {
+      // the ember stirs
+      core.material.opacity = align * 0.85;
+      core.userData.glow.material.opacity = align * 0.6;
+      coreLight.intensity = align * 1.4;
+    }
+  }
+
+  function updateParticles(dt) {
+    // ambient motes drift upward
+    var pos = ambientMotes.geometry.attributes.position;
+    for (var i = 0; i < moteData.length; i++) {
+      var y = pos.getY(i) + moteData[i].vy * dt;
+      var x = pos.getX(i) + Math.sin(state.time * 0.5 + moteData[i].phase) * 0.002;
+      if (y > 5.5) y = -1.4;
+      pos.setY(i, y); pos.setX(i, x);
+    }
+    pos.needsUpdate = true;
+
+    // reconnection streams
+    for (var s = streams.length - 1; s >= 0; s--) {
+      var st = streams[s];
+      st.life += dt;
+      var p = st.mesh.geometry.attributes.position;
+      var allDone = true;
+      for (var j = 0; j < st.parts.length; j++) {
+        var pt = st.parts[j];
+        if (st.life < pt.delay) { allDone = false; continue; }
+        pt.t = Math.min(1, pt.t + dt / 1.7);
+        if (pt.t < 1) allDone = false;
+        var e = easeInOut(pt.t);
+        var cx = pt.p.x + (st.target.x - pt.p.x) * e;
+        var cy = pt.p.y + (st.target.y - pt.p.y) * e + Math.sin(e * Math.PI) * 0.9;
+        var cz = pt.p.z + (st.target.z - pt.p.z) * e;
+        p.setXYZ(j, cx, cy, cz);
+      }
+      p.needsUpdate = true;
+      st.mesh.material.opacity = Math.max(0, 0.95 - Math.max(0, st.life - 1.8));
+      if (allDone && st.mesh.material.opacity <= 0) {
+        scene.remove(st.mesh);
+        streams.splice(s, 1);
+      }
+    }
+  }
+
+  function updateWorld(dt) {
+    if (REDUCED_MOTION) return;
+    flowers.forEach(function (f) {
+      f.rotation.z = Math.sin(state.time * 1.1 + f.userData.phase) * 0.06;
+    });
+    clouds.forEach(function (c) {
+      c.position.x += c.userData.speed * dt;
+      if (c.position.x > 34) c.position.x = -34;
+    });
+  }
+
+  function updateHints(dt) {
+    if (state.phase !== 'play') return;
+    state.idleTimer += dt;
+    if (state.idleTimer > 14 && state.holdSoul === -1) {
+      state.idleTimer = 0;
+      state.hintIndex = (state.hintIndex + 1) % HINTS.length;
+      setStatus(HINTS[state.hintIndex]);
+    }
+  }
+
+  function updateTweens(dt) {
+    for (var i = tweens.length - 1; i >= 0; i--) {
+      var tw = tweens[i];
+      tw.t += dt;
+      var k = Math.min(1, tw.t / tw.dur);
+      tw.fn(k);
+      if (k >= 1) {
+        tweens.splice(i, 1);
+        if (tw.done) tw.done();
+      }
+    }
+  }
+
+  function animate() {
+    requestAnimationFrame(animate);
+    var dt = Math.min(clock.getDelta(), 0.05);
+    state.time += dt;
+
+    updateRotation(dt);
+    updateSouls(dt);
+    updateParticles(dt);
+    updateWorld(dt);
+    updateHints(dt);
+    updateTweens(dt);
+
+    // subtle idle camera sway
+    if (!state.dragging && !REDUCED_MOTION) {
+      camera.position.x = Math.sin(state.time * 0.09) * 0.5;
+      camera.position.y = 2.3 + Math.sin(state.time * 0.13) * 0.08;
+      camera.lookAt(0, 0.8, 0);
+    }
+
+    renderer.render(scene, camera);
+  }
+
+  function onResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  }
+
+  // ---------- Boot ----------
+  window.addEventListener('load', function () {
+    statusEl = $('status');
+    holdTrack = $('holdTrack');
+    holdFill = $('holdFill');
+    footerHint = $('footerHint');
+    hud = $('hud');
+    flashEl = $('flash');
+
+    initThree();
+    animate();
+    console.log('%c[Rippoutai] v1.0 — three souls, one cube, golden hour.', 'color:#e0a35c');
+  });
+})();
+
+</script>
+</body>
+</html>
