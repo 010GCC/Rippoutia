@@ -7,307 +7,61 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Marcellus&family=Zen+Old+Mincho:wght@400&display=swap');
-
-    :root {
-      --ivory: #f9ecd3;
-      --ivory-dim: #e8d3ac;
-      --ink: rgba(34, 24, 14, 0.62);
-      --gold: #f5b45a;
-      --ember: #e0813f;
-    }
-
-    * { box-sizing: border-box; }
-
-    html, body {
-      margin: 0;
-      height: 100%;
-      overflow: hidden;
-      background: #120d08;
-      font-family: 'Marcellus', serif;
-      color: var(--ivory);
-      -webkit-user-select: none;
-      user-select: none;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    canvas { display: block; }
-
-    .hud {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      z-index: 40;
-      opacity: 0;
-      transition: opacity 1.4s ease;
-    }
-    .hud.visible { opacity: 1; }
-
-    .brand {
-      position: absolute;
-      top: 18px;
-      left: 22px;
-      line-height: 1.25;
-    }
-    .brand .name {
-      font-size: 17px;
-      letter-spacing: 0.22em;
-    }
-    .brand .kanji {
-      font-family: 'Zen Old Mincho', serif;
-      font-size: 12px;
-      color: var(--ivory-dim);
-      letter-spacing: 0.5em;
-    }
-
-    .souls-count {
-      position: absolute;
-      top: 22px;
-      right: 24px;
-      display: flex;
-      gap: 12px;
-      align-items: center;
-    }
-    .soul-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      border: 1px solid rgba(249, 236, 211, 0.55);
-      background: transparent;
-      transition: all 0.9s ease;
-    }
-    .soul-dot.lit {
-      background: var(--gold);
-      border-color: var(--gold);
-      box-shadow: 0 0 12px rgba(245, 180, 90, 0.9);
-    }
-
-    .status-wrap {
-      position: absolute;
-      top: 26px;
-      left: 50%;
-      transform: translateX(-50%);
-      text-align: center;
-      max-width: min(560px, 86vw);
-    }
-    .status {
-      font-size: 16px;
-      letter-spacing: 0.06em;
-      color: var(--ivory);
-      text-shadow: 0 1px 10px rgba(40, 20, 5, 0.6);
-      transition: opacity 0.5s ease;
-      min-height: 22px;
-    }
-    .hold-track {
-      margin: 10px auto 0;
-      width: 150px;
-      height: 2px;
-      background: rgba(249, 236, 211, 0.25);
-      border-radius: 2px;
-      overflow: hidden;
-      opacity: 0;
-      transition: opacity 0.4s ease;
-    }
-    .hold-track.on { opacity: 1; }
-    .hold-fill {
-      height: 100%;
-      width: 0%;
-      background: var(--gold);
-      box-shadow: 0 0 8px rgba(245, 180, 90, 0.9);
-      transition: width 0.08s linear;
-    }
-
-    .footer-hint {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 12.5px;
-      letter-spacing: 0.14em;
-      color: rgba(249, 236, 211, 0.72);
-      text-shadow: 0 1px 8px rgba(40, 20, 5, 0.7);
-      white-space: nowrap;
-    }
-
-    .btn-reset {
-      position: absolute;
-      bottom: 16px;
-      right: 20px;
-      pointer-events: auto;
-      background: var(--ink);
-      color: var(--ivory-dim);
-      border: 1px solid rgba(249, 236, 211, 0.25);
-      border-radius: 9999px;
-      padding: 7px 16px;
-      font-family: 'Marcellus', serif;
-      font-size: 12px;
-      letter-spacing: 0.16em;
-      cursor: pointer;
-      backdrop-filter: blur(6px);
-      transition: all 0.25s ease;
-    }
-    .btn-reset:hover { color: var(--ivory); border-color: rgba(249, 236, 211, 0.5); }
-
-    .overlay {
-      position: absolute;
-      inset: 0;
-      z-index: 60;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 24px;
-      background:
-        radial-gradient(ellipse at 50% 120%, rgba(224, 129, 63, 0.35), transparent 60%),
-        linear-gradient(to bottom, rgba(18, 12, 6, 0.55), rgba(18, 12, 6, 0.78));
-      backdrop-filter: blur(2px);
-      transition: opacity 1.6s ease;
-    }
-    .overlay.hidden { opacity: 0; pointer-events: none; }
-
-    .overlay .kanji-big {
-      font-family: 'Zen Old Mincho', serif;
-      font-size: 22px;
-      letter-spacing: 0.9em;
-      margin-left: 0.9em;
-      color: var(--ivory-dim);
-    }
-    .overlay h1 {
-      font-size: clamp(44px, 9vw, 88px);
-      font-weight: 400;
-      letter-spacing: 0.14em;
-      margin: 10px 0 6px;
-      color: var(--ivory);
-      text-shadow: 0 0 40px rgba(245, 180, 90, 0.35);
-    }
-    .overlay .tagline {
-      font-size: 15px;
-      letter-spacing: 0.3em;
-      color: var(--ivory-dim);
-      margin-bottom: 44px;
-    }
-    .overlay .lore {
-      max-width: 420px;
-      font-size: 15px;
-      line-height: 1.8;
-      letter-spacing: 0.05em;
-      color: rgba(249, 236, 211, 0.85);
-      margin-bottom: 44px;
-    }
-    .btn-begin {
-      pointer-events: auto;
-      background: transparent;
-      color: var(--ivory);
-      border: 1px solid rgba(249, 236, 211, 0.6);
-      padding: 13px 46px;
-      font-family: 'Marcellus', serif;
-      font-size: 16px;
-      letter-spacing: 0.3em;
-      cursor: pointer;
-      transition: all 0.35s ease;
-    }
-    .btn-begin:hover {
-      background: rgba(245, 180, 90, 0.16);
-      border-color: var(--gold);
-      box-shadow: 0 0 30px rgba(245, 180, 90, 0.25);
-    }
-
-    #ending .lore { margin-bottom: 30px; }
-
-    .vignette {
-      position: absolute;
-      inset: 0;
-      z-index: 30;
-      pointer-events: none;
-      background: radial-gradient(ellipse at center, transparent 58%, rgba(24, 14, 5, 0.42) 100%);
-    }
-
-    .flash {
-      position: absolute;
-      inset: 0;
-      z-index: 50;
-      pointer-events: none;
-      background: radial-gradient(ellipse at center, rgba(255, 226, 170, 0.95), rgba(245, 180, 90, 0.5) 45%, transparent 75%);
-      opacity: 0;
-    }
-
-    .cube-state {
-      position: absolute;
-      bottom: 52px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 11px;
-      letter-spacing: 0.28em;
-      text-transform: uppercase;
-      color: rgba(249, 236, 211, 0.55);
-      text-shadow: 0 1px 8px rgba(40, 20, 5, 0.7);
-      transition: color 0.6s ease, opacity 0.6s ease;
-      white-space: nowrap;
-    }
-    .cube-state.hot { color: rgba(245, 180, 90, 0.95); }
-    .cube-state.discord { color: rgba(224, 129, 63, 0.85); }
-
-    @media (max-width: 640px) {
-      .status { font-size: 14px; }
-      .footer-hint { font-size: 11px; }
-      .brand .name { font-size: 14px; }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .overlay, .hud { transition-duration: 0.2s; }
-    }
+    :root { --ivory:#f9ecd3; --ivory-dim:#e8d3ac; --ink:rgba(34,24,14,.62); --gold:#f5b45a; --ember:#e0813f; }
+    *{box-sizing:border-box} html,body{margin:0;height:100%;overflow:hidden;background:#120d08;font-family:Marcellus,serif;color:var(--ivory);user-select:none;-webkit-user-select:none}
+    canvas{display:block}
+    .hud{position:absolute;inset:0;pointer-events:none;z-index:40;opacity:0;transition:opacity 1.4s ease}
+    .hud.visible{opacity:1}
+    .brand{position:absolute;top:18px;left:22px;line-height:1.25}
+    .brand .name{font-size:17px;letter-spacing:.22em}
+    .brand .kanji{font-family:'Zen Old Mincho',serif;font-size:12px;color:var(--ivory-dim);letter-spacing:.5em}
+    .souls-count{position:absolute;top:22px;right:24px;display:flex;gap:12px}
+    .soul-dot{width:12px;height:12px;border-radius:50%;border:1px solid rgba(249,236,211,.55);transition:all .9s ease}
+    .soul-dot.lit{background:var(--gold);border-color:var(--gold);box-shadow:0 0 12px rgba(245,180,90,.9)}
+    .status-wrap{position:absolute;top:26px;left:50%;transform:translateX(-50%);text-align:center;max-width:min(560px,86vw)}
+    .status{font-size:16px;letter-spacing:.06em;text-shadow:0 1px 10px rgba(40,20,5,.6);transition:opacity .5s;min-height:22px}
+    .hold-track{margin:10px auto 0;width:150px;height:2px;background:rgba(249,236,211,.25);border-radius:2px;overflow:hidden;opacity:0;transition:opacity .4s}
+    .hold-track.on{opacity:1}
+    .hold-fill{height:100%;width:0%;background:var(--gold);box-shadow:0 0 8px rgba(245,180,90,.9)}
+    .footer-hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);font-size:12.5px;letter-spacing:.14em;color:rgba(249,236,211,.72);white-space:nowrap}
+    .btn-reset{position:absolute;bottom:16px;right:20px;pointer-events:auto;background:var(--ink);color:var(--ivory-dim);border:1px solid rgba(249,236,211,.25);border-radius:9999px;padding:7px 16px;font-family:Marcellus,serif;font-size:12px;letter-spacing:.16em;cursor:pointer}
+    .overlay{position:absolute;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;background:radial-gradient(ellipse at 50% 120%,rgba(224,129,63,.35),transparent 60%),linear-gradient(to bottom,rgba(18,12,6,.55),rgba(18,12,6,.78));transition:opacity 1.6s}
+    .overlay.hidden{opacity:0;pointer-events:none}
+    .overlay .kanji-big{font-family:'Zen Old Mincho',serif;font-size:22px;letter-spacing:.9em;margin-left:.9em;color:var(--ivory-dim)}
+    .overlay h1{font-size:clamp(44px,9vw,88px);font-weight:400;letter-spacing:.14em;margin:10px 0 6px;text-shadow:0 0 40px rgba(245,180,90,.35)}
+    .overlay .tagline{font-size:15px;letter-spacing:.3em;color:var(--ivory-dim);margin-bottom:44px}
+    .overlay .lore{max-width:420px;font-size:15px;line-height:1.8;color:rgba(249,236,211,.85);margin-bottom:44px}
+    .btn-begin{pointer-events:auto;background:transparent;color:var(--ivory);border:1px solid rgba(249,236,211,.6);padding:13px 46px;font-family:Marcellus,serif;font-size:16px;letter-spacing:.3em;cursor:pointer}
+    .vignette{position:absolute;inset:0;z-index:30;pointer-events:none;background:radial-gradient(ellipse at center,transparent 58%,rgba(24,14,5,.42) 100%)}
+    .flash{position:absolute;inset:0;z-index:50;pointer-events:none;background:radial-gradient(ellipse at center,rgba(255,226,170,.95),rgba(245,180,90,.5) 45%,transparent 75%);opacity:0}
+    .cube-state{position:absolute;bottom:52px;left:50%;transform:translateX(-50%);font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:rgba(249,236,211,.55);white-space:nowrap}
+    .cube-state.hot{color:rgba(245,180,90,.95)}.cube-state.discord{color:rgba(224,129,63,.85)}
   </style>
 </head>
 <body>
-
   <div class="overlay" id="title">
     <div class="kanji-big">離魂体</div>
     <h1>RIPPOUTAI</h1>
     <div class="tagline">detached souls &nbsp;•&nbsp; impossible cube</div>
-    <div class="lore">
-      Three souls drifted loose from the world.<br>
-      They wait in the meadow, watching the cube.<br>
-      Each remembers one angle — the one where<br>
-      the impossible becomes true.
-    </div>
+    <div class="lore">Three souls drifted loose from the world.<br>They wait in the meadow, watching the cube.<br>Each remembers one angle — the one where<br>the impossible becomes true.</div>
     <button class="btn-begin" id="beginBtn">BEGIN</button>
   </div>
-
   <div class="overlay hidden" id="ending">
     <div class="kanji-big">離魂体</div>
-    <h1 style="font-size:clamp(34px,6vw,60px);">RECONNECTED</h1>
-    <div class="lore" id="endingLore">
-      The souls found their angles.<br>
-      The cube opened, and the meadow kept the light.
-    </div>
+    <h1 style="font-size:clamp(34px,6vw,60px)">RECONNECTED</h1>
+    <div class="lore">The souls found their angles.<br>The cube opened, and the meadow kept the light.</div>
     <button class="btn-begin" id="againBtn">PLAY AGAIN</button>
   </div>
-
   <div class="hud" id="hud">
-    <div class="brand">
-      <div class="name">RIPPOUTAI</div>
-      <div class="kanji">離魂体</div>
-    </div>
-
-    <div class="souls-count" id="soulsCount">
-      <div class="soul-dot" id="dot0"></div>
-      <div class="soul-dot" id="dot1"></div>
-      <div class="soul-dot" id="dot2"></div>
-    </div>
-
-    <div class="status-wrap">
-      <div class="status" id="status"></div>
-      <div class="hold-track" id="holdTrack"><div class="hold-fill" id="holdFill"></div></div>
-    </div>
-
+    <div class="brand"><div class="name">RIPPOUTAI</div><div class="kanji">離魂体</div></div>
+    <div class="souls-count"><div class="soul-dot" id="dot0"></div><div class="soul-dot" id="dot1"></div><div class="soul-dot" id="dot2"></div></div>
+    <div class="status-wrap"><div class="status" id="status"></div><div class="hold-track" id="holdTrack"><div class="hold-fill" id="holdFill"></div></div></div>
     <div class="cube-state" id="cubeState">dormant</div>
-    <div class="footer-hint" id="footerHint">drag to turn &nbsp;•&nbsp; Space explore &nbsp;•&nbsp; R reset</div>
+    <div class="footer-hint">drag to turn &nbsp;•&nbsp; Space explore &nbsp;•&nbsp; R reset</div>
     <button class="btn-reset" id="resetBtn">RESET</button>
   </div>
-
   <div class="vignette"></div>
   <div class="flash" id="flash"></div>
-
   <script src="rippoutai.min.js"></script>
 </body>
 </html>
