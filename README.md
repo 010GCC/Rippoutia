@@ -1,120 +1,92 @@
 # Rippoutai (離魂体) — Detached Soul Prototype
 
-Indie game prototype exploring **impossible mechanics**, **shadow/soul figures**, and **grounded fantasy** with strong silhouettes and emotional authenticity (Yoshida-inspired).
+Indie browser prototype exploring **impossible mechanics**, **shadow/soul figures**, and **grounded fantasy** with strong silhouettes and emotional authenticity (Yoshida-inspired).
+
+> Solunip Labs · playable HTML/Three.js slice · open `index.html`
 
 ## Project Vision
-A game about detached souls (離魂体 — "Rippoutai"), perspective shifts, and reconnection. The impossible cube serves as the central metaphor and primary interaction object. Shadow figures react with agency, memory, and emotional weight.
+A game about detached souls (離魂体 — "Rippoutai"), perspective shifts, and reconnection. The impossible cube is the central metaphor and primary interaction object. Shadow figures react with agency, memory, and emotional weight.
 
-Current prototype: Lightweight HTML/JS implementation (see `index.html`).
+## Current State (September 2026)
 
-## Current State (June 2026)
-- **Fluid single-axis rotation** implemented using spring-damper steering model (precise, park-anywhere, no hard snapping).
-- **Multi-axis mode added** (toggleable): Horizontal drag = Yaw, Vertical drag = Pitch. Both axes use identical fluid characteristics for full exploration of all cube faces.
-- 3 reactive shadow/soul figures that respond continuously to cube orientation on both axes (facing, bobbing, emissive state).
-- Clean English UI, Three.js prototype, mouse + touch support, keyboard shortcuts.
-- v0.2 core loop is now significantly advanced — the cube feels alive and explorable.
+**Primary build: `index.html`** — a focused 5–10 minute reconnection slice (beyond the older fluid-controls sandbox).
 
-## v0.2 Milestone Targets
+| Claim | Status in `index.html` |
+| --- | --- |
+| Fluid spring-damper rotation | **Present** (yaw + pitch always on; park-anywhere) |
+| Multi-axis toggle (M) | **Superseded** — multi-axis is always on; toggle lives only in `index-testing.html` |
+| 3 reactive shadow/soul figures | **Present** — Sora, the twins, Yoru |
+| Mouse + touch | **Present** |
+| Keyboard | **R** reset · **Space** explore nudge · (testing build also has S / M) |
+| Distinct cube states | **Present** — dormant / discord / weave / ring / ember |
+| Resonant reconnection moment | **Present** — hold near a soul’s angle → cinematic dissolve → finale |
+| Onboarding + recovery | **Present** — title lore, rotating hints, hold-slip recovery copy |
+| CHANGELOG + playtest Qs | **Present** — see `CHANGELOG.md` and below |
 
-Target these concrete goals to deliver a coherent, playable, and emotionally promising slice:
+### Other files
+- `index-testing.html` — earlier multi-axis sandbox (toggle, Space randomize, S shadows). Useful for control tuning; not the narrative slice.
+- `index-2.html` — static marketing/landing mock (video hero); not the playable prototype.
+- Concept `IMG_*.jpeg` / generated videos — art reference, not wired into the runtime.
 
-- **Impossible Cube Core Loop**: Player can reliably select, rotate, and trigger non-Euclidean reconfigurations or perspective shifts. At least 3–4 distinct, meaningful cube states. The "impossible" quality must be immediately felt and learnable in the first 2–3 minutes.
-- **Shadow/Soul Figure Agency**: 2–3 shadow figures with reactive behaviors tied to cube state and player actions (echoing, merging/splitting, attraction/avoidance). Behaviors read clearly through strong silhouettes and expressive animation. They must feel alive with inner life.
-- **One Resonant Perspective-Shift Moment**: A discoverable interaction where cube manipulation produces a clear "soul reconnection" or reality shift with emotional/curiosity payoff.
-- **Visual & Animation Production Baseline**: All primary entities have final-direction art with strong readable silhouettes, raw emotional texture, at least two animation states each, and consistent transparent exports ready for use. No placeholders in the core slice.
-- **Focused Playable Experience**: Self-contained 5–10 minute session with onboarding, shadow interaction, the resonant moment, and basic recovery states.
-- **Technical Foundation & Hygiene**: Clean input handling, simple state system for shadows, perspective support for impossible feel. Properly versioned with changelog linked to play observations.
-- **Playtest-Ready**: Easily runnable. Prepared focused playtest questions around cube feeling "impossibly good", shadows having soul/agency, and emotional impact of perspective shifts.
-
-## Fluid Controls Design (Critical v0.2 Improvement)
-
-**Problem**: Discrete snapping to cardinal angles makes manipulation feel imprecise and breaks the organic "impossible" and soul-like reactivity we're aiming for.
-
-**Approach**: Treat rotation as **continuous** (any floating-point angle) using a steering-inspired control model (spring toward target + damping), similar to autonomous driving path-following algorithms. No automatic return to 0/90/180 on release unless explicitly triggered by gameplay (e.g. soul-link alignment).
-
-This enables precise placement at any angle while preserving weighted, intentional feel — essential for emergence and emotional resonance.
-
-### Core Implementation (Pseudo-code)
-
-```js
-// Per-entity state
-let currentAngle = 0;      // radians or degrees — continuous
-let targetAngle = 0;
-let angularVelocity = 0;
-
-// Input handler (e.g. pointer drag)
-function handleInput(delta, isActive) {
-  if (isActive) {
-    const sensitivity = 1.2; // tune per device/feel
-    targetAngle = currentAngle + (delta * sensitivity);
-    // Alternative velocity-based: angularVelocity += delta * torque;
-  }
-  // On release: do NOT snap. Let player "park" at any angle.
-}
-
-// Per-frame update (dt in seconds)
-function update(dt) {
-  const springStrength = 18;
-  const damping = 0.85;     // tune for natural stopping (higher = stops faster)
-
-  const angleError = shortestAngleDifference(targetAngle, currentAngle);
-  angularVelocity += angleError * springStrength * dt;
-  angularVelocity *= Math.pow(damping, dt * 60); // frame-rate independent
-
-  currentAngle += angularVelocity * dt;
-
-  // Optional: only "magnetic" snap at deliberate interaction points
-  // if (nearLinkPoint && Math.abs(angleError) < threshold) { currentAngle = targetAngle; ... }
-
-  drawEntity(currentAngle);
-}
-```
-
-**Tuning**: Expose springStrength and damping as live sliders during prototyping. Add input curves for fine control near zero.
-
-**Benefits for Rippoutai**:
-- Precise, fluid cube manipulation supports the "impossible" fantasy.
-- Shadows can react continuously and expressively to exact cube state.
-- Players can create and hold meaningful non-cardinal configurations.
-- Feels responsive and "alive" rather than mechanical.
-
-### Multi-Axis Extension (v0.2)
-The same spring-damper model was extended to a second axis (Pitch/X) and made toggleable via the **"Multi-Axis Orbit"** button.
-
-- **OFF** (default): Classic single-axis behavior (Yaw only) — preserves the original focused "north/south pole" interaction.
-- **ON**: Full two-axis control. Horizontal drag rotates Yaw, vertical drag rotates Pitch. Both axes use identical spring strength + damping values so the feel remains consistent and precise.
-- Purpose: Allow players to freely explore **all faces** of the impossible cube while maintaining the weighted, park-anywhere control quality.
-- Shadows were updated to react to the combined orientation for richer emotional agency.
-
-This directly advances the **Impossible Cube Core Loop** and **Shadow/Soul Figure Agency** v0.2 milestones.
-
-## Character & Shadow Design Notes (Playability)
-
-To support fluid controls and readability:
-- Silhouettes and landmark features (eyes, structure, markings) must remain strong and unambiguous at **any** intermediate angle.
-- Add secondary motion and overlap on rotation starts/stops for weight and responsiveness.
-- Shadow figures: smooth continuous lerping of facing, posture, and state indicators. Use subtle emissive/particle changes to telegraph behavioral state (attracted, echoing, destabilized, integrated).
-- Visual feedback must make the precision of continuous input *visible* so players trust and enjoy the controls.
-
-## How to Run
-
+## How to Play
 1. Open `index.html` in a modern browser.
-2. Drag horizontally to rotate the cube (fluid spring-damper control).
-3. Click **"Multi-Axis Orbit"** to toggle full two-axis exploration (horizontal = Yaw, vertical = Pitch).
-4. Use **R** to reset, **Space** to randomize, **S** to toggle shadows, or **M** for multi-axis.
-5. Shadows react continuously to the cube's full orientation.
+2. **BEGIN** — drag to turn the cube (horizontal = yaw, vertical = pitch).
+3. Watch the souls’ **eyes**. Bright = warm/near their remembered angle.
+4. When a soul stirs, **hold still** until the hold meter fills.
+5. Reconnect all three → the cube opens.
+6. If you get lost: **Space** parks near a half-remembered angle; **R** resets orientation.
 
-## Development & Iteration
+## Cube States (core loop)
+1. **Dormant** — quiet frame; meadow holds its breath.
+2. **Discord** — restless motion far from memory; beams shiver.
+3. **Weave** (Sora) — depth-cheat impossible beams bloom.
+4. **Ring** (the twins) — scattered arcs resolve toward one circle.
+5. **Ember** (Yoru / finale) — core wakes; meadow keeps the light.
 
+## Shadow Agency (current)
+- **Attraction** — lean toward the cube as alignment grows.
+- **Echo** — bodies tilt with cube angular velocity.
+- **Merge / split** — the twins close ranks when near their angle, separate when cold.
+- **Avoidance** — non-focused souls ease outward while another is nearly held.
+- **Eyes** — primary warmer/colder tell at any distance.
+
+## v0.2 Milestone Scorecard
+
+| Target | Progress |
+| --- | --- |
+| Impossible Cube Core Loop (3–4 states, learnable fast) | **Mostly met** — five named states + three payoffs; still tuning discoverability |
+| Shadow/Soul Figure Agency | **Advanced** — echo / merge-split / avoidance added; richer choreography still open |
+| One Resonant Perspective-Shift Moment | **Met** — per-soul payoff + finale |
+| Visual & Animation Production Baseline | **Partial** — intentional procedural meadow/silhouettes; not final concept-art exports |
+| Focused Playable Experience (5–10 min) | **Met** — title → play → reconnect → recovery → ending |
+| Technical Foundation & Hygiene | **Advanced** — clean input + soul align state; changelog linked to play notes |
+| Playtest-Ready | **Ready for first pass** — runnable + questions below |
+
+## Playtest Questions (focused)
+1. Did the cube ever feel **impossibly good** (a moment where geometry lied in a satisfying way)? Which state (weave / ring / ember)?
+2. Did the shadows feel like they had **inner life**, or like UI indicators? What read clearest (eyes, lean, twins merge, echo tilt)?
+3. Was the **hold-to-reconnect** moment emotionally clear, or just a progress bar?
+4. If you slipped a hold, did recovery copy / Space help you stay curious?
+5. Rough session length — and where did attention drop?
+
+Log answers → turn into the next `CHANGELOG.md` entry.
+
+## Remaining v0.2 Gaps (next increments)
+1. **Final-direction art** — replace procedural silhouettes with concept-aligned transparent exports; 2+ authored anim states each.
+2. **Deeper agency** — stronger echoing of player intent; clearer merge/split staging; optional attract/avoid between souls.
+3. **Discoverability** — ensure first impossible beat lands within ~2–3 minutes for cold players without Space.
+4. **Hygiene** — keep README/CHANGELOG in lockstep; retire or clearly label `index-testing.html` / `index-2.html`.
+
+## Fluid Controls (preserved)
+Continuous angles via spring-damper steering (no hard snap on release). Deliberate magnetism only near a soul-link. See `CHANGELOG.md` and in-file tunables (`SPRING_STRENGTH`, `DAMPING`, `MAGNET_STRENGTH`).
+
+## Development Notes
 - Small, testable increments only.
-- Every change must clearly advance the core fantasy: detached soul, impossible perspective, emotional reconnection.
-- Playtest frequently with focused questions.
-- Document decisions here and in code comments.
-
-For detailed iteration checklists and design lenses, refer to the project's game-improvement guidance.
+- Every change must advance: detached soul · impossible perspective · emotional reconnection.
+- Prefer the single-file Three.js style of `index.html`.
 
 ---
 
-**Status**: Actively iterating toward v0.2. Fluid controls implementation is the current priority.
+**Status**: Playable v0.2 slice in `index.html`. Docs synced September 2026. Next priority: art baseline + deeper shadow choreography after playtest.
 
-Last updated: June 2026
+Last updated: September 2026
