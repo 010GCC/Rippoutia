@@ -16,6 +16,7 @@ Play observations drive these notes. Newest first.
 - **Recovery**: hold-slip messaging; **Space** explores a half-remembered unreconnected angle (off-center, not an auto-solve).
 - **Onboarding hints** extended for slip recovery and Space.
 - README synced to the actual build; playtest questions added.
+- Playable module packaged as verified `rippoutai-c*.js` base64 chunks + boot assembler (HUD shell in `index.html`).
 
 ### Still open (see README)
 - Final-direction art vs procedural silhouettes.
