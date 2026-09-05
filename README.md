@@ -2,7 +2,7 @@
 
 Indie browser prototype exploring **impossible mechanics**, **shadow/soul figures**, and **grounded fantasy** with strong silhouettes and emotional authenticity (Yoshida-inspired).
 
-> Solunip Labs · playable HTML/Three.js slice · open `index.html`
+> Solunip Labs · playable HTML/Three.js slice · open `index.html` (Three.js CDN + `rippoutai-c*.js` playable module)
 
 ## Project Vision
 A game about detached souls (離魂体 — "Rippoutai"), perspective shifts, and reconnection. The impossible cube is the central metaphor and primary interaction object. Shadow figures react with agency, memory, and emotional weight.
@@ -24,6 +24,7 @@ A game about detached souls (離魂体 — "Rippoutai"), perspective shifts, and
 | CHANGELOG + playtest Qs | **Present** — see `CHANGELOG.md` and below |
 
 ### Other files
+- `rippoutai-c-init.js` / `rippoutai-c0.js`…`c15.js` / `rippoutai-c-boot.js` — playable game module (base64 chunks assembled at runtime).
 - `index-testing.html` — earlier multi-axis sandbox (toggle, Space randomize, S shadows). Useful for control tuning; not the narrative slice.
 - `index-2.html` — static marketing/landing mock (video hero); not the playable prototype.
 - Concept `IMG_*.jpeg` / generated videos — art reference, not wired into the runtime.
@@ -83,7 +84,7 @@ Continuous angles via spring-damper steering (no hard snap on release). Delibera
 ## Development Notes
 - Small, testable increments only.
 - Every change must advance: detached soul · impossible perspective · emotional reconnection.
-- Prefer the single-file Three.js style of `index.html`.
+- Playable logic lives in the `rippoutai-c*.js` module (assembled at load); HUD shell stays in `index.html`.
 
 ---
 
